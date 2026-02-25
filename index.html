@@ -518,10 +518,10 @@ function renderPreview(){
     const parser=new DOMParser();const doc=parser.parseFromString(s.originalSVG,'image/svg+xml');const orig=doc.querySelector('svg');
     const vb=orig.getAttribute('viewBox')||`0 0 ${orig.getAttribute('width')||1920} ${orig.getAttribute('height')||1080}`;
     svg.setAttribute('viewBox',vb);svg.innerHTML=orig.innerHTML;
-    svg.querySelectorAll('*').forEach(el=>{if(el.tagName!=='defs'&&el.tagName!=='style'){const f=el.getAttribute('fill');if(f&&f!=='none'&&f!=='transparent'&&f!=='white'&&f!=='#fff'&&f!=='#ffffff'&&el.tagName!=='text')el.setAttribute('fill','none');}});
+    svg.querySelectorAll('*').forEach(el=>{if(el.tagName!=='defs'&&el.tagName!=='style'){const f=el.getAttribute('fill');if(f&&f!=='none'&&f!=='transparent'&&f!=='white'&&f!=='#fff'&&f!=='#ffffff'&&el.tagName!=='text')el.setAttribute('fill','none');const st=el.getAttribute('stroke');if(st&&st!=='none')el.setAttribute('stroke-width','4');}});
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else if(s.svgPath){
-    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${s.svgPath}" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${s.svgPath}" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else{svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML='';zone.classList.remove('has-art');clearBtn.classList.remove('visible');}
   fitPreview();
