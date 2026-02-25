@@ -615,7 +615,15 @@ function generateConnectionPoints(fromPts,toPts,numPoints){
 }
 
 function pNext(){
-  if(pAnimating)return;pIdx++;if(pIdx>=slides.length){stopPresentation();return;}
+  if(pAnimating){
+    // Skip animation: complete current slide instantly
+    if(pCancel){pCancel();pCancel=null;}
+    rebuildTo(pIdx);
+    showText(pIdx);
+    pAnimating=false;
+    return;
+  }
+  pIdx++;if(pIdx>=slides.length){stopPresentation();return;}
   pAnimating=true;
   document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
   document.getElementById('present-title').textContent=slides[pIdx].title||'';
