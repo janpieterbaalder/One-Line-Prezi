@@ -306,8 +306,10 @@ function renderTextBlocks(){
     // Click to select
     el.addEventListener('mousedown',e=>{
       if(e.target.classList.contains('tb-delete'))return;
+      // If already selected and clicking on text, don't re-render (would destroy contenteditable focus)
+      if(e.target.classList.contains('tb-text')&&idx===selectedTB)return;
       selectTextBlock(idx);
-      if(e.target.classList.contains('tb-text'))return; // let contenteditable work
+      if(e.target.classList.contains('tb-text'))return; // newly selected, next click will edit
       e.preventDefault();
       startDragTB(e,idx,scaleX,scaleY);
     });
