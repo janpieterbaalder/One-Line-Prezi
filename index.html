@@ -552,6 +552,7 @@ function startPresentation(){
   pCanvas.width=1920;pCanvas.height=1080;
   fitPresentCanvas();
   pViewport.slideW=1920;pViewport.slideH=1080;
+  pViewport.slideStride=pViewport.slideW*1.5; // Extra gap between slides for smoother transitions
   pViewport.scale=1;
   pViewport.padX=0;
   pViewport.padY=0;
@@ -569,7 +570,7 @@ function sampleAllSlides(){
     const totalLen=p.getTotalLength();
     const n=Math.max(500,Math.min(3000,Math.round(totalLen/.3)));
     const pts=[];
-    for(let j=0;j<=n;j++){const pt=p.getPointAtLength((j/n)*totalLen);pts.push({x:pt.x*pViewport.scale+pViewport.padX+i*pViewport.slideW,y:pt.y*pViewport.scale+pViewport.padY});}
+    for(let j=0;j<=n;j++){const pt=p.getPointAtLength((j/n)*totalLen);pts.push({x:pt.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:pt.y*pViewport.scale+pViewport.padY});}
     pSlidePoints.push(pts);document.body.removeChild(t);
   });
 }
@@ -661,7 +662,7 @@ function rebuildTo(idx){
     }
     pts.forEach(p=>window._drawnPoints.push({...p}));
   }
-  renderFrame(idx*pViewport.slideW);
+  renderFrame(idx*pViewport.slideStride);
 }
 
 function positionTextOverlays(){
@@ -755,12 +756,12 @@ function renderFrame(scrollX){
 function animateTransition(slideIdx,done){
   const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
   if(!prevPts?.length||!newPts?.length){
-    const sf=(slideIdx-1)*pViewport.slideW,st=slideIdx*pViewport.slideW;let start=null,cancelled=false;pCancel=()=>{cancelled=true};
+    const sf=(slideIdx-1)*pViewport.slideStride,st=slideIdx*pViewport.slideStride;let start=null,cancelled=false;pCancel=()=>{cancelled=true};
     requestAnimationFrame(function f(ts){if(cancelled)return;if(!start)start=ts;const t=Math.min(1,(ts-start)/1500);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;renderFrame(sf+(st-sf)*e);if(t<1)requestAnimationFrame(f);else{pCancel=null;done();}});
     return;
   }
   const connectionPoints=generateConnectionPoints(prevPts,newPts,80);
-  const scrollFrom=(slideIdx-1)*pViewport.slideW,scrollTo=slideIdx*pViewport.slideW;
+  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
   const duration=1800;let start=null,cancelled=false,connAdded=0;pCancel=()=>{cancelled=true};
   requestAnimationFrame(function f(ts){
     if(cancelled)return;if(!start)start=ts;
@@ -778,7 +779,7 @@ function animateDrawSlide(slideIdx,done){
   const pts=pSlidePoints[slideIdx];if(!pts?.length){done();return;}
   const speed=parseInt(document.getElementById('speed-range').value);
   const duration=Math.max(2500,22000-speed*2000);
-  const scrollX=slideIdx*pViewport.slideW;
+  const scrollX=slideIdx*pViewport.slideStride;
   let start=null,cancelled=false,lastIdx=0;pCancel=()=>{cancelled=true};
   requestAnimationFrame(function f(ts){
     if(cancelled)return;if(!start)start=ts;
