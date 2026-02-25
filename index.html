@@ -632,7 +632,7 @@ function pNext(){
   document.getElementById('present-subtitle').classList.remove('visible');
   document.getElementById('present-textblocks').innerHTML='';
   if(pIdx===0)animateDrawSlide(pIdx,()=>{showText(pIdx);pAnimating=false;});
-  else animateTransition(pIdx,()=>{animateDrawSlide(pIdx,()=>{showText(pIdx);pAnimating=false;});});
+  else animateTransitionAndDraw(pIdx,()=>{showText(pIdx);pAnimating=false;});
 }
 
 function pPrev(){
@@ -772,6 +772,60 @@ function animateTransition(slideIdx,done){
     renderFrame(scrollX);
     if(t<1)requestAnimationFrame(f);
     else{while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}pCancel=null;done();}
+  });
+}
+
+// Unified transition: camera pan + connection curve + drawing in one seamless animation
+function animateTransitionAndDraw(slideIdx,doneCb){
+  const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
+  // Fallback: if either slide has no points, use sequential approach
+  if(!prevPts?.length||!newPts?.length){
+    animateTransition(slideIdx,()=>{animateDrawSlide(slideIdx,doneCb);});
+    return;
+  }
+  const connectionPoints=generateConnectionPoints(prevPts,newPts,80);
+  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
+  const speed=parseInt(document.getElementById('speed-range').value);
+  const drawDuration=Math.max(2500,22000-speed*2000);
+  // Phase timing:
+  // - Connection curve: 0 → connDur (line bridges gap between slides)
+  // - Camera pan: 0 → connDur + cameraSettle (camera keeps decelerating into drawing start)
+  // - Slide drawing: connDur → connDur + drawDuration
+  const connDur=1200;
+  const cameraSettle=400;
+  const cameraDur=connDur+cameraSettle;
+  const totalDur=connDur+drawDuration;
+  let start=null,cancelled=false,connAdded=0,drawIdx=0;
+  pCancel=()=>{cancelled=true};
+  requestAnimationFrame(function f(ts){
+    if(cancelled)return;
+    if(!start)start=ts;
+    const elapsed=ts-start;
+    // Camera: smooth ease-in-out over cameraDur, then locked to final position
+    const camT=Math.min(1,elapsed/cameraDur);
+    const camE=camT<.5?2*camT*camT:1-Math.pow(-2*camT+2,2)/2;
+    const scrollX=scrollFrom+(scrollTo-scrollFrom)*camE;
+    // Connection curve: ease-in-out over connDur
+    const conT=Math.min(1,elapsed/connDur);
+    const conE=conT<.5?2*conT*conT:1-Math.pow(-2*conT+2,2)/2;
+    const targetConn=Math.floor(conE*connectionPoints.length);
+    while(connAdded<targetConn){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+    // Slide drawing: starts at connDur, uses same easing as animateDrawSlide
+    if(elapsed>=connDur){
+      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+      const dElapsed=elapsed-connDur;
+      const dT=Math.min(1,dElapsed/drawDuration);
+      const dE=dT<0.15?dT/0.15*0.25:0.25+(1-0.25)*((dT-0.15)/0.85)**0.7;
+      const targetIdx=Math.floor(dE*(newPts.length-1));
+      while(drawIdx<=targetIdx){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
+    }
+    renderFrame(scrollX);
+    if(elapsed<totalDur){requestAnimationFrame(f);}
+    else{
+      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+      while(drawIdx<newPts.length){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
+      renderFrame(scrollTo);pCancel=null;doneCb();
+    }
   });
 }
 
