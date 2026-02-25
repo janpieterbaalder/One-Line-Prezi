@@ -87,6 +87,28 @@
   #present-subtitle.visible{opacity:1}
   #present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none}
   #present-title.visible{opacity:1}
+  .present-textblock{position:absolute;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none;white-space:pre-wrap;max-width:60%}
+  .present-textblock.visible{opacity:1}
+
+  /* Text block editor */
+  .tb-overlay{position:absolute;cursor:move;padding:4px 8px;border:1.5px dashed transparent;border-radius:4px;min-width:40px;min-height:20px;user-select:none;transition:border-color .15s,box-shadow .15s}
+  .tb-overlay:hover{border-color:var(--accent)}
+  .tb-overlay.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(184,96,42,.15)}
+  .tb-overlay .tb-text{outline:none;white-space:pre-wrap;min-width:30px;min-height:16px;cursor:text}
+  .tb-overlay .tb-delete{position:absolute;top:-10px;right:-10px;width:20px;height:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:12px;line-height:20px;text-align:center;cursor:pointer;opacity:0;transition:opacity .15s}
+  .tb-overlay:hover .tb-delete{opacity:1}
+  .tb-overlay .tb-delete:hover{background:#c44}
+
+  #textblock-controls{display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:8px;padding:8px 14px;gap:8px;align-items:center;flex-wrap:wrap;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  #textblock-controls.visible{display:flex}
+  #textblock-controls .tb-label{font-size:10px;color:var(--ink-light);text-transform:uppercase;letter-spacing:.5px;margin-right:2px}
+
+  #add-textblock-btn{position:absolute;bottom:70px;right:12px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:5px;color:var(--ink-light);padding:6px 12px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;transition:all .2s;z-index:5}
+  #add-textblock-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .size-input{width:54px;background:var(--canvas-bg);border:1px solid var(--border);border-radius:4px;color:var(--ink);padding:4px 6px;font-family:'Outfit',sans-serif;font-size:11px;outline:none;transition:border-color .2s;text-align:center}
+  .size-input:focus{border-color:var(--accent)}
+  .size-input::-webkit-inner-spin-button{opacity:1}
 
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
   .modal-bg.visible{display:flex}
@@ -129,6 +151,14 @@
           <div class="upload-hint">SVG met één pad werkt het best</div>
         </div>
         <button id="clear-art-btn" onclick="clearCurrentArt()">✕ Verwijder</button>
+        <button id="add-textblock-btn" onclick="addTextBlock()">+ Tekst blok</button>
+        <div id="textblock-controls">
+          <span class="tb-label">Blok:</span>
+          <select class="sub-select" id="tb-font-select"></select>
+          <input type="number" class="size-input" id="tb-size-input" value="30" min="8" max="200" title="Grootte in px">
+          <button class="style-btn bold-btn" id="tb-bold-btn" onclick="toggleTbBold()" title="Bold">B</button>
+          <button class="style-btn italic-btn" id="tb-italic-btn" onclick="toggleTbItalic()" title="Cursief">I</button>
+        </div>
         <div id="subtitle-area">
           <input type="text" id="subtitle-input" placeholder="Ondertitel voor deze dia...">
           <div id="subtitle-controls">
@@ -142,17 +172,7 @@
               <option value="Raleway">Raleway</option>
               <option value="DM Sans">DM Sans</option>
             </select>
-            <select class="sub-select" id="size-select">
-              <option value="18">18px</option>
-              <option value="22">22px</option>
-              <option value="26">26px</option>
-              <option value="30" selected>30px</option>
-              <option value="36">36px</option>
-              <option value="42">42px</option>
-              <option value="48">48px</option>
-              <option value="56">56px</option>
-              <option value="64">64px</option>
-            </select>
+            <input type="number" class="size-input" id="size-input" value="30" min="8" max="200" title="Grootte in px">
             <button class="style-btn bold-btn" id="bold-btn" onclick="toggleBold()" title="Bold">B</button>
             <button class="style-btn italic-btn" id="italic-btn" onclick="toggleItalic()" title="Cursief">I</button>
           </div>
@@ -166,6 +186,7 @@
   <canvas id="present-canvas"></canvas>
   <div id="present-title"></div>
   <div id="present-subtitle"></div>
+  <div id="present-textblocks"></div>
   <div id="present-counter"></div>
   <button id="present-exit" onclick="stopPresentation()">Esc — Sluiten</button>
 </div>
@@ -175,7 +196,7 @@
     <h2>Hoe werkt One Line?</h2>
     <p>
       <strong>1. Upload SVG's</strong> — Sleep of klik om een SVG toe te voegen per dia.<br><br>
-      <strong>2. Bouw je presentatie</strong> — Titels, ondertitels met lettertype, grootte en stijl.<br><br>
+      <strong>2. Bouw je presentatie</strong> — Titels, ondertitels en tekst blokken met lettertype, grootte (in px) en stijl. Tekst blokken kun je vrij positioneren door te slepen.<br><br>
       <strong>3. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia.<br><br>
       <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> — Volgende &nbsp;
       <kbd>←</kbd> — Vorige &nbsp;
@@ -198,8 +219,9 @@ const FONTS = ['Cormorant Garamond','Playfair Display','Lora','Merriweather','So
 // DATA
 // ============================================================
 let slides=[{title:'Dia 1',subtitle:'',svgPath:'',originalSVG:'',pathLength:0,
-  subFont:'Cormorant Garamond',subSize:30,subBold:false,subItalic:false}];
+  subFont:'Cormorant Garamond',subSize:30,subBold:false,subItalic:false,textBlocks:[]}];
 let currentSlide=0;
+let selectedTB=null; // index of selected text block
 
 // ============================================================
 // SUBTITLE STYLE CONTROLS
@@ -219,7 +241,7 @@ function updateSubtitlePreview(){
 function syncSubControls(){
   const s=slides[currentSlide];
   document.getElementById('font-select').value=s.subFont;
-  document.getElementById('size-select').value=s.subSize;
+  document.getElementById('size-input').value=s.subSize;
   document.getElementById('bold-btn').classList.toggle('active',s.subBold);
   document.getElementById('italic-btn').classList.toggle('active',s.subItalic);
   updateSubtitlePreview();
@@ -228,8 +250,8 @@ function syncSubControls(){
 document.getElementById('font-select').addEventListener('change',e=>{
   slides[currentSlide].subFont=e.target.value;updateSubtitlePreview();
 });
-document.getElementById('size-select').addEventListener('change',e=>{
-  slides[currentSlide].subSize=parseInt(e.target.value);updateSubtitlePreview();
+document.getElementById('size-input').addEventListener('input',e=>{
+  const v=parseInt(e.target.value);if(v>=8&&v<=200){slides[currentSlide].subSize=v;updateSubtitlePreview();}
 });
 function toggleBold(){
   slides[currentSlide].subBold=!slides[currentSlide].subBold;
@@ -244,6 +266,126 @@ function toggleItalic(){
 
 // Set font-family on font-select options for preview
 document.querySelectorAll('#font-select option').forEach(opt=>{opt.style.fontFamily=`'${opt.value}', serif`;});
+
+// ============================================================
+// TEXT BLOCK LOGIC
+// ============================================================
+// Populate tb-font-select with same fonts
+(function(){
+  const sel=document.getElementById('tb-font-select');
+  FONTS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;o.style.fontFamily=`'${f}', serif`;sel.appendChild(o);});
+})();
+
+function addTextBlock(){
+  const s=slides[currentSlide];
+  if(!s.textBlocks)s.textBlocks=[];
+  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:30,bold:false,italic:false});
+  selectedTB=s.textBlocks.length-1;
+  renderTextBlocks();showTbControls();
+}
+
+function renderTextBlocks(){
+  const wrap=document.getElementById('preview-wrap');
+  // Remove existing overlays
+  wrap.querySelectorAll('.tb-overlay').forEach(el=>el.remove());
+  const s=slides[currentSlide];
+  if(!s.textBlocks)return;
+  const wrapW=wrap.clientWidth,wrapH=wrap.clientHeight;
+  const scaleX=wrapW/1920,scaleY=wrapH/1080;
+  s.textBlocks.forEach((tb,idx)=>{
+    const el=document.createElement('div');
+    el.className='tb-overlay'+(idx===selectedTB?' selected':'');
+    el.style.left=(tb.x*scaleX)+'px';
+    el.style.top=(tb.y*scaleY)+'px';
+    el.style.fontFamily=`'${tb.font}', serif`;
+    el.style.fontSize=(tb.size*scaleX)+'px';
+    el.style.fontWeight=tb.bold?'700':'400';
+    el.style.fontStyle=tb.italic?'italic':'normal';
+    el.style.color='#1a1a1a';
+    el.innerHTML=`<div class="tb-text" contenteditable="true">${escHTML(tb.text)}</div><button class="tb-delete" onclick="event.stopPropagation();deleteTextBlock(${idx})">×</button>`;
+    // Click to select
+    el.addEventListener('mousedown',e=>{
+      if(e.target.classList.contains('tb-delete'))return;
+      selectTextBlock(idx);
+      if(e.target.classList.contains('tb-text'))return; // let contenteditable work
+      e.preventDefault();
+      startDragTB(e,idx,scaleX,scaleY);
+    });
+    // Update text on input
+    el.querySelector('.tb-text').addEventListener('input',e=>{
+      s.textBlocks[idx].text=e.target.textContent;
+    });
+    wrap.appendChild(el);
+  });
+}
+
+function escHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function selectTextBlock(idx){
+  selectedTB=idx;
+  renderTextBlocks();
+  showTbControls();
+}
+
+function deleteTextBlock(idx){
+  slides[currentSlide].textBlocks.splice(idx,1);
+  selectedTB=null;
+  renderTextBlocks();hideTbControls();
+}
+
+function showTbControls(){
+  if(selectedTB===null)return;
+  const tb=slides[currentSlide].textBlocks[selectedTB];
+  if(!tb)return;
+  const ctrl=document.getElementById('textblock-controls');
+  ctrl.classList.add('visible');
+  document.getElementById('tb-font-select').value=tb.font;
+  document.getElementById('tb-size-input').value=tb.size;
+  document.getElementById('tb-bold-btn').classList.toggle('active',tb.bold);
+  document.getElementById('tb-italic-btn').classList.toggle('active',tb.italic);
+}
+function hideTbControls(){document.getElementById('textblock-controls').classList.remove('visible');}
+
+document.getElementById('tb-font-select').addEventListener('change',e=>{
+  if(selectedTB===null)return;
+  slides[currentSlide].textBlocks[selectedTB].font=e.target.value;renderTextBlocks();
+});
+document.getElementById('tb-size-input').addEventListener('input',e=>{
+  if(selectedTB===null)return;
+  const v=parseInt(e.target.value);if(v>=8&&v<=200){slides[currentSlide].textBlocks[selectedTB].size=v;renderTextBlocks();}
+});
+function toggleTbBold(){
+  if(selectedTB===null)return;
+  const tb=slides[currentSlide].textBlocks[selectedTB];tb.bold=!tb.bold;
+  document.getElementById('tb-bold-btn').classList.toggle('active',tb.bold);renderTextBlocks();
+}
+function toggleTbItalic(){
+  if(selectedTB===null)return;
+  const tb=slides[currentSlide].textBlocks[selectedTB];tb.italic=!tb.italic;
+  document.getElementById('tb-italic-btn').classList.toggle('active',tb.italic);renderTextBlocks();
+}
+
+// Drag text blocks to reposition
+function startDragTB(e,idx,scaleX,scaleY){
+  const tb=slides[currentSlide].textBlocks[idx];
+  const startMX=e.clientX,startMY=e.clientY;
+  const startX=tb.x,startY=tb.y;
+  function onMove(ev){
+    tb.x=Math.max(0,Math.min(1800,startX+(ev.clientX-startMX)/scaleX));
+    tb.y=Math.max(0,Math.min(1000,startY+(ev.clientY-startMY)/scaleY));
+    renderTextBlocks();
+  }
+  function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);}
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+}
+
+// Deselect text block when clicking on preview background
+document.getElementById('preview-wrap').addEventListener('mousedown',e=>{
+  if(e.target.id==='preview-svg'||e.target.closest('#preview-svg')||e.target.id==='upload-zone'){
+    selectedTB=null;renderTextBlocks();hideTbControls();
+  }
+});
 
 // ============================================================
 // SVG UPLOAD
@@ -307,20 +449,20 @@ function saveInputs(){
   s.title=document.getElementById('slide-title-input').value;
   s.subtitle=document.getElementById('subtitle-input').value;
   s.subFont=document.getElementById('font-select').value;
-  s.subSize=parseInt(document.getElementById('size-select').value);
+  s.subSize=parseInt(document.getElementById('size-input').value)||30;
 }
 function selectSlide(i){
-  saveInputs();currentSlide=i;
+  saveInputs();currentSlide=i;selectedTB=null;
   const s=slides[i];
   document.getElementById('slide-title-input').value=s.title||'';
   document.getElementById('subtitle-input').value=s.subtitle||'';
-  syncSubControls();renderPreview();updateSlideList();
+  syncSubControls();renderPreview();updateSlideList();renderTextBlocks();hideTbControls();
 }
 function addSlide(){
   saveInputs();
   const prev=slides[currentSlide];
   slides.push({title:`Dia ${slides.length+1}`,subtitle:'',svgPath:'',originalSVG:'',pathLength:0,
-    subFont:prev.subFont,subSize:prev.subSize,subBold:prev.subBold,subItalic:prev.subItalic});
+    subFont:prev.subFont,subSize:prev.subSize,subBold:prev.subBold,subItalic:prev.subItalic,textBlocks:[]});
   selectSlide(slides.length-1);
 }
 function deleteSlide(i){if(slides.length<=1)return;slides.splice(i,1);if(currentSlide>=slides.length)currentSlide=slides.length-1;selectSlide(currentSlide);}
@@ -350,7 +492,7 @@ function fitPreview(){
   if(w/h>ratio)w=h*ratio;else h=w/ratio;w=Math.max(w,200);h=Math.max(h,120);
   wrap.style.width=w+'px';wrap.style.height=h+'px';svg.setAttribute('width',w);svg.setAttribute('height',h);
 }
-window.addEventListener('resize',()=>{fitPreview();updateSubtitlePreview();});setTimeout(()=>{fitPreview();updateSubtitlePreview();},100);
+window.addEventListener('resize',()=>{fitPreview();updateSubtitlePreview();renderTextBlocks();});setTimeout(()=>{fitPreview();updateSubtitlePreview();},100);
 
 function measurePath(d){
   const t=document.createElementNS('http://www.w3.org/2000/svg','svg');t.setAttribute('viewBox','0 0 1920 1080');t.style.cssText='position:absolute;left:-9999px;width:0;height:0';
@@ -414,7 +556,8 @@ function stopPresentation(){
   if(pCancel){pCancel();pCancel=null;}
   document.getElementById('presenter').style.display='none';document.getElementById('editor').style.display='flex';
   document.getElementById('present-title').classList.remove('visible');document.getElementById('present-subtitle').classList.remove('visible');
-  fitPreview();renderPreview();
+  document.getElementById('present-textblocks').innerHTML='';
+  fitPreview();renderPreview();renderTextBlocks();
 }
 
 // Direction from last N points (N=3 for tight tangent matching)
@@ -456,6 +599,7 @@ function pNext(){
   document.getElementById('present-title').textContent=slides[pIdx].title||'';
   document.getElementById('present-title').classList.remove('visible');
   document.getElementById('present-subtitle').classList.remove('visible');
+  document.getElementById('present-textblocks').innerHTML='';
   if(pIdx===0)animateDrawSlide(pIdx,()=>{showText(pIdx);pAnimating=false;});
   else animateTransition(pIdx,()=>{animateDrawSlide(pIdx,()=>{showText(pIdx);pAnimating=false;});});
 }
@@ -469,6 +613,7 @@ function pPrev(){
   applySubtitleStyle(pIdx);
   if(slides[pIdx].subtitle)document.getElementById('present-subtitle').classList.add('visible');
   else document.getElementById('present-subtitle').classList.remove('visible');
+  showPresentTextBlocks(pIdx);
 }
 
 function rebuildTo(idx){
@@ -520,7 +665,35 @@ function showText(idx){
     subEl.textContent=slides[idx].subtitle||'';
     applySubtitleStyle(idx);
     if(slides[idx].subtitle)subEl.classList.add('visible');
+    showPresentTextBlocks(idx);
   },300);
+}
+
+function showPresentTextBlocks(idx){
+  const container=document.getElementById('present-textblocks');
+  container.innerHTML='';
+  const s=slides[idx];
+  if(!s.textBlocks||!s.textBlocks.length)return;
+  const cl=parseFloat(pCanvas.style.left)||0;
+  const ct=parseFloat(pCanvas.style.top)||0;
+  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
+  const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
+  const scaleX=cssW/1920,scaleY=cssH/1080;
+  s.textBlocks.forEach(tb=>{
+    const el=document.createElement('div');
+    el.className='present-textblock';
+    el.textContent=tb.text;
+    el.style.left=(cl+tb.x*scaleX)+'px';
+    el.style.top=(ct+tb.y*scaleY)+'px';
+    el.style.fontFamily=`'${tb.font}', serif`;
+    el.style.fontSize=Math.max(10,tb.size*scaleY)+'px';
+    el.style.fontWeight=tb.bold?'700':'400';
+    el.style.fontStyle=tb.italic?'italic':'normal';
+    el.style.color='#1a1a1a';
+    container.appendChild(el);
+    // Fade in after a short delay (text appears after drawing)
+    requestAnimationFrame(()=>el.classList.add('visible'));
+  });
 }
 
 function applySubtitleStyle(idx){
@@ -601,6 +774,7 @@ window.addEventListener('resize',()=>{
   if(document.getElementById('presenter').style.display==='block'){
     fitPresentCanvas();
     rebuildTo(pIdx);
+    showPresentTextBlocks(pIdx);
   }
 });
 
@@ -610,8 +784,8 @@ window.addEventListener('resize',()=>{
 function exportJSON(){
   saveInputs();
   const exp=slides.map(s=>({title:s.title,subtitle:s.subtitle,svgPath:s.svgPath,originalSVG:s.originalSVG||'',pathLength:s.pathLength,
-    subFont:s.subFont,subSize:s.subSize,subBold:s.subBold,subItalic:s.subItalic}));
-  const blob=new Blob([JSON.stringify({version:6,slides:exp},null,2)],{type:'application/json'});
+    subFont:s.subFont,subSize:s.subSize,subBold:s.subBold,subItalic:s.subItalic,textBlocks:s.textBlocks||[]}));
+  const blob=new Blob([JSON.stringify({version:7,slides:exp},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='one-line-presentatie.json';a.click();
 }
 function importJSON(){document.getElementById('json-file-input').click();}
@@ -619,14 +793,15 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;const reader=new FileReader();
   reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.slides?.length>0){
     slides=data.slides.map(s=>({title:s.title||'',subtitle:s.subtitle||'',svgPath:s.svgPath||'',originalSVG:s.originalSVG||'',pathLength:s.pathLength||0,
-      subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||30,subBold:!!s.subBold,subItalic:!!s.subItalic}));
+      subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||30,subBold:!!s.subBold,subItalic:!!s.subItalic,
+      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||30,bold:!!tb.bold,italic:!!tb.italic}))}));
     currentSlide=0;selectSlide(0);}}catch{alert('Ongeldig bestand.');}};
   reader.readAsText(f);e.target.value='';
 });
 function showHelp(){document.getElementById('help-modal').classList.add('visible');}
 
 // INIT
-updateSlideList();renderPreview();syncSubControls();
+updateSlideList();renderPreview();syncSubControls();renderTextBlocks();
 document.getElementById('slide-title-input').value=slides[0].title;
 </script>
 </body>
