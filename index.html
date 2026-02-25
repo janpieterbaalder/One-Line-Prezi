@@ -155,7 +155,7 @@
         <div id="textblock-controls">
           <span class="tb-label">Blok:</span>
           <select class="sub-select" id="tb-font-select"></select>
-          <input type="number" class="size-input" id="tb-size-input" value="30" min="8" max="200" title="Grootte in px">
+          <input type="number" class="size-input" id="tb-size-input" value="80" min="8" max="200" title="Grootte in px">
           <button class="style-btn bold-btn" id="tb-bold-btn" onclick="toggleTbBold()" title="Bold">B</button>
           <button class="style-btn italic-btn" id="tb-italic-btn" onclick="toggleTbItalic()" title="Cursief">I</button>
         </div>
@@ -172,7 +172,7 @@
               <option value="Raleway">Raleway</option>
               <option value="DM Sans">DM Sans</option>
             </select>
-            <input type="number" class="size-input" id="size-input" value="30" min="8" max="200" title="Grootte in px">
+            <input type="number" class="size-input" id="size-input" value="80" min="8" max="200" title="Grootte in px">
             <button class="style-btn bold-btn" id="bold-btn" onclick="toggleBold()" title="Bold">B</button>
             <button class="style-btn italic-btn" id="italic-btn" onclick="toggleItalic()" title="Cursief">I</button>
           </div>
@@ -219,7 +219,7 @@ const FONTS = ['Cormorant Garamond','Playfair Display','Lora','Merriweather','So
 // DATA
 // ============================================================
 let slides=[{title:'Dia 1',subtitle:'',svgPath:'',originalSVG:'',pathLength:0,
-  subFont:'Cormorant Garamond',subSize:30,subBold:false,subItalic:false,textBlocks:[]}];
+  subFont:'Cormorant Garamond',subSize:80,subBold:false,subItalic:false,textBlocks:[]}];
 let currentSlide=0;
 let selectedTB=null; // index of selected text block
 
@@ -279,9 +279,18 @@ document.querySelectorAll('#font-select option').forEach(opt=>{opt.style.fontFam
 function addTextBlock(){
   const s=slides[currentSlide];
   if(!s.textBlocks)s.textBlocks=[];
-  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:30,bold:false,italic:false});
+  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false});
   selectedTB=s.textBlocks.length-1;
   renderTextBlocks();showTbControls();
+  // Immediately focus the new text block for editing
+  requestAnimationFrame(()=>{
+    const overlays=document.querySelectorAll('.tb-overlay');
+    const newEl=overlays[overlays.length-1];
+    if(newEl){
+      const txt=newEl.querySelector('.tb-text');
+      if(txt){txt.focus();document.execCommand('selectAll',false,null);}
+    }
+  });
 }
 
 function renderTextBlocks(){
@@ -308,8 +317,19 @@ function renderTextBlocks(){
       if(e.target.classList.contains('tb-delete'))return;
       // If already selected and clicking on text, don't re-render (would destroy contenteditable focus)
       if(e.target.classList.contains('tb-text')&&idx===selectedTB)return;
+      const clickedOnText=e.target.classList.contains('tb-text');
       selectTextBlock(idx);
-      if(e.target.classList.contains('tb-text'))return; // newly selected, next click will edit
+      if(clickedOnText){
+        // Focus the text element right after re-render so user can edit immediately
+        requestAnimationFrame(()=>{
+          const overlays=document.querySelectorAll('.tb-overlay');
+          if(overlays[idx]){
+            const txt=overlays[idx].querySelector('.tb-text');
+            if(txt)txt.focus();
+          }
+        });
+        return;
+      }
       e.preventDefault();
       startDragTB(e,idx,scaleX,scaleY);
     });
@@ -451,7 +471,7 @@ function saveInputs(){
   s.title=document.getElementById('slide-title-input').value;
   s.subtitle=document.getElementById('subtitle-input').value;
   s.subFont=document.getElementById('font-select').value;
-  s.subSize=parseInt(document.getElementById('size-input').value)||30;
+  s.subSize=parseInt(document.getElementById('size-input').value)||80;
 }
 function selectSlide(i){
   saveInputs();currentSlide=i;selectedTB=null;
@@ -705,7 +725,7 @@ function applySubtitleStyle(idx){
   // Scale the subtitle font size proportionally to the presentation canvas
   const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
   const scale=cssH/1080;
-  el.style.fontSize=Math.max(16, (s.subSize||30) * scale)+'px';
+  el.style.fontSize=Math.max(16, (s.subSize||80) * scale)+'px';
   el.style.fontWeight=s.subBold?'700':'400';
   el.style.fontStyle=s.subItalic?'italic':'normal';
   el.style.color='#1a1a1a';
@@ -795,8 +815,8 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;const reader=new FileReader();
   reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.slides?.length>0){
     slides=data.slides.map(s=>({title:s.title||'',subtitle:s.subtitle||'',svgPath:s.svgPath||'',originalSVG:s.originalSVG||'',pathLength:s.pathLength||0,
-      subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||30,subBold:!!s.subBold,subItalic:!!s.subItalic,
-      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||30,bold:!!tb.bold,italic:!!tb.italic}))}));
+      subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,subBold:!!s.subBold,subItalic:!!s.subItalic,
+      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic}))}));
     currentSlide=0;selectSlide(0);}}catch{alert('Ongeldig bestand.');}};
   reader.readAsText(f);e.target.value='';
 });
