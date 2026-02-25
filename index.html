@@ -27,6 +27,9 @@
   .slide-thumb .delete-btn{opacity:0;background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;padding:2px 6px;transition:opacity .2s}
   .slide-thumb:hover .delete-btn{opacity:1}
   .slide-thumb .delete-btn:hover{color:#c44}
+  .slide-thumb.dragging{opacity:.35}
+  .slide-thumb.drag-over-top{box-shadow:0 -2px 0 0 var(--accent)}
+  .slide-thumb.drag-over-bottom{box-shadow:0 2px 0 0 var(--accent)}
   #sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
   .sidebar-btn{padding:10px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--ink-light);cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;transition:all .2s;text-align:center}
   .sidebar-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -458,12 +461,20 @@ function clearCurrentArt(){slides[currentSlide].svgPath='';slides[currentSlide].
 // ============================================================
 // SLIDE LIST
 // ============================================================
+let dragFromIdx=null;
 function updateSlideList(){
   const list=document.getElementById('slide-list');list.innerHTML='';
   slides.forEach((s,i)=>{
     const div=document.createElement('div');div.className='slide-thumb'+(i===currentSlide?' active':'');
+    div.draggable=true;
     div.innerHTML=`<div class="num">${i+1}</div><div class="info"><div class="title">${s.title||'Zonder titel'}</div><div class="sub">${s.svgPath?'SVG ✓':'Geen afbeelding'}</div></div>${slides.length>1?`<button class="delete-btn" onclick="event.stopPropagation();deleteSlide(${i})">×</button>`:''}`;
-    div.onclick=()=>selectSlide(i);list.appendChild(div);
+    div.onclick=()=>selectSlide(i);
+    div.addEventListener('dragstart',e=>{dragFromIdx=i;div.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    div.addEventListener('dragend',()=>{dragFromIdx=null;div.classList.remove('dragging');list.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bottom');});});
+    div.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';const rect=div.getBoundingClientRect();const mid=rect.top+rect.height/2;list.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bottom');});if(e.clientY<mid)div.classList.add('drag-over-top');else div.classList.add('drag-over-bottom');});
+    div.addEventListener('dragleave',()=>{div.classList.remove('drag-over-top','drag-over-bottom');});
+    div.addEventListener('drop',e=>{e.preventDefault();if(dragFromIdx===null||dragFromIdx===i)return;const rect=div.getBoundingClientRect();const mid=rect.top+rect.height/2;let toIdx=e.clientY<mid?i:i+1;if(dragFromIdx<toIdx)toIdx--;if(dragFromIdx===toIdx)return;saveInputs();const moved=slides.splice(dragFromIdx,1)[0];slides.splice(toIdx,0,moved);currentSlide=toIdx;updateSlideList();renderPreview();renderTextBlocks();});
+    list.appendChild(div);
   });
 }
 function saveInputs(){
