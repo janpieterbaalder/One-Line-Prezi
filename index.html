@@ -765,7 +765,7 @@ function applySubtitleStyle(idx){
 function renderFrame(scrollX){
   pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
   const pts=window._drawnPoints;if(pts.length<2)return;
-  pCtx.save();pCtx.strokeStyle='#1a1a1a';pCtx.lineWidth=2.5;pCtx.lineCap='round';pCtx.lineJoin='round';
+  pCtx.save();pCtx.strokeStyle='#1a1a1a';pCtx.lineWidth=4;pCtx.lineCap='round';pCtx.lineJoin='round';
   pCtx.beginPath();pCtx.moveTo(pts[0].x-scrollX,pts[0].y);
   for(let i=1;i<pts.length;i++)pCtx.lineTo(pts[i].x-scrollX,pts[i].y);
   pCtx.stroke();pCtx.restore();
