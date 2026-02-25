@@ -635,7 +635,11 @@ function pNext(){
 }
 
 function pPrev(){
-  if(pAnimating)return;if(pIdx<=0)return;pIdx--;rebuildTo(pIdx);
+  if(pAnimating){
+    if(pCancel){pCancel();pCancel=null;}
+    pAnimating=false;
+  }
+  if(pIdx<=0)return;pIdx--;rebuildTo(pIdx);
   document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
   document.getElementById('present-title').textContent=slides[pIdx].title||'';
   document.getElementById('present-title').classList.add('visible');
