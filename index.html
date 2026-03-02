@@ -83,9 +83,10 @@
   #presenter{display:none;position:fixed;inset:0;background:#000;z-index:100;overflow:hidden}
   #present-canvas{position:absolute;background:var(--canvas-bg)}
   #present-counter{position:fixed;bottom:20px;right:30px;font-size:11px;color:#ccc;z-index:101;letter-spacing:1px}
-  #present-exit{position:fixed;top:20px;right:24px;z-index:101;background:none;border:1px solid #ddd;border-radius:5px;color:#bbb;padding:6px 14px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;opacity:0;transition:opacity .3s}
-  #presenter:hover #present-exit{opacity:1}
-  #present-exit:hover{border-color:var(--accent);color:var(--accent)}
+  #present-controls{position:fixed;top:20px;right:24px;z-index:101;display:flex;gap:8px;opacity:0;transition:opacity .3s}
+  #presenter:hover #present-controls{opacity:1}
+  #present-controls button{background:none;border:1px solid #ddd;border-radius:5px;color:#bbb;padding:6px 14px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;transition:all .2s}
+  #present-controls button:hover{border-color:var(--accent);color:var(--accent)}
   #present-subtitle{position:absolute;text-align:center;opacity:0;transition:opacity .8s;max-width:70%;z-index:101;pointer-events:none}
   #present-subtitle.visible{opacity:1}
   #present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none}
@@ -205,7 +206,10 @@
   <div id="present-subtitle"></div>
   <div id="present-textblocks"></div>
   <div id="present-counter"></div>
-  <button id="present-exit" onclick="stopPresentation()">Esc — Sluiten</button>
+  <div id="present-controls">
+    <button id="present-fullscreen" onclick="toggleFullscreen()">Volledig scherm</button>
+    <button id="present-exit" onclick="stopPresentation()">Esc — Sluiten</button>
+  </div>
 </div>
 
 <div class="modal-bg" id="help-modal" onclick="this.classList.remove('visible')">
@@ -660,11 +664,25 @@ function sampleAllSlides(){
 
 function stopPresentation(){
   if(pCancel){pCancel();pCancel=null;}
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
   document.getElementById('presenter').style.display='none';document.getElementById('editor').style.display='flex';
   document.getElementById('present-title').classList.remove('visible');document.getElementById('present-subtitle').classList.remove('visible');
   document.getElementById('present-textblocks').innerHTML='';
   fitPreview();renderPreview();renderTextBlocks();
 }
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }else{
+    document.exitFullscreen().catch(()=>{});
+  }
+}
+// Update fullscreen button text on change
+document.addEventListener('fullscreenchange',()=>{
+  const btn=document.getElementById('present-fullscreen');
+  if(btn)btn.textContent=document.fullscreenElement?'Venster':'Volledig scherm';
+});
 
 // Direction from last N points (N=3 for tight tangent matching)
 function getExitDirection(pts){
@@ -954,11 +972,23 @@ window.addEventListener('resize',()=>{
 // ============================================================
 // SAVE / LOAD
 // ============================================================
-function exportJSON(){
+async function exportJSON(){
   saveInputs();
   const exp=slides.map(s=>({title:s.title,subtitle:s.subtitle,svgPath:s.svgPath,originalSVG:s.originalSVG||'',pathLength:s.pathLength,
     subFont:s.subFont,subSize:s.subSize,subBold:s.subBold,subItalic:s.subItalic,textBlocks:s.textBlocks||[]}));
-  const blob=new Blob([JSON.stringify({version:7,slides:exp},null,2)],{type:'application/json'});
+  const json=JSON.stringify({version:7,slides:exp},null,2);
+  // Use File System Access API to let user pick save location
+  if(window.showSaveFilePicker){
+    try{
+      const handle=await window.showSaveFilePicker({suggestedName:'one-line-presentatie.json',types:[{description:'JSON bestand',accept:{'application/json':['.json']}}]});
+      const writable=await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return;
+    }catch(e){if(e.name==='AbortError')return;/* user cancelled */}
+  }
+  // Fallback for browsers without File System Access API
+  const blob=new Blob([json],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='one-line-presentatie.json';a.click();
 }
 function importJSON(){document.getElementById('json-file-input').click();}
