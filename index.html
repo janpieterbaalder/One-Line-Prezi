@@ -960,7 +960,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'){e.preventDefault();pPrev();}
   if(e.key==='Escape')stopPresentation();
 });
-document.getElementById('presenter').addEventListener('click',e=>{if(e.target.id==='present-exit')return;pNext();});
+document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls'))return;pNext();});
 window.addEventListener('resize',()=>{
   if(document.getElementById('presenter').style.display==='block'){
     fitPresentCanvas();
