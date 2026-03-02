@@ -678,10 +678,23 @@ function toggleFullscreen(){
     document.exitFullscreen().catch(()=>{});
   }
 }
-// Update fullscreen button text on change
+// Update fullscreen button text and rescale presentation on change
 document.addEventListener('fullscreenchange',()=>{
   const btn=document.getElementById('present-fullscreen');
   if(btn)btn.textContent=document.fullscreenElement?'Venster':'Volledig scherm';
+  // Rescale canvas and text when fullscreen changes during presentation
+  if(document.getElementById('presenter').style.display==='block'){
+    setTimeout(()=>{
+      fitPresentCanvas();
+      rebuildTo(pIdx);
+      showPresentTextBlocks(pIdx);
+      // Re-show title and subtitle with correct positioning
+      const titleEl=document.getElementById('present-title');
+      const subEl=document.getElementById('present-subtitle');
+      positionTextOverlays();
+      if(titleEl.classList.contains('visible'))applySubtitleStyle(pIdx);
+    },100);
+  }
 });
 
 // Direction from last N points (N=3 for tight tangent matching)
