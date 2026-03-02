@@ -102,6 +102,16 @@
   .tb-overlay:hover .tb-delete{opacity:1}
   .tb-overlay .tb-delete:hover{background:#c44}
 
+  /* Snap guides */
+  .snap-guide{position:absolute;background:var(--accent);opacity:.45;z-index:20;pointer-events:none}
+  .snap-guide.horizontal{height:1px;left:0;right:0}
+  .snap-guide.vertical{width:1px;top:0;bottom:0}
+
+  /* Alignment buttons */
+  .align-btn{background:var(--canvas-bg);border:1px solid var(--border);border-radius:4px;color:var(--ink-light);padding:4px 8px;cursor:pointer;font-size:12px;transition:all .15s;font-family:'Outfit',sans-serif;line-height:1}
+  .align-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .align-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
   #textblock-controls{display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:8px;padding:8px 14px;gap:8px;align-items:center;flex-wrap:wrap;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.06)}
   #textblock-controls.visible{display:flex}
   #textblock-controls .tb-label{font-size:10px;color:var(--ink-light);text-transform:uppercase;letter-spacing:.5px;margin-right:2px}
@@ -161,6 +171,10 @@
           <input type="number" class="size-input" id="tb-size-input" value="80" min="8" max="200" title="Grootte in px">
           <button class="style-btn bold-btn" id="tb-bold-btn" onclick="toggleTbBold()" title="Bold">B</button>
           <button class="style-btn italic-btn" id="tb-italic-btn" onclick="toggleTbItalic()" title="Cursief">I</button>
+          <div class="t-sep"></div>
+          <button class="align-btn" id="tb-align-left" onclick="setTbAlign('left')" title="Links uitlijnen">&#9776;</button>
+          <button class="align-btn" id="tb-align-center" onclick="setTbAlign('center')" title="Centreren">&#9781;</button>
+          <button class="align-btn" id="tb-align-right" onclick="setTbAlign('right')" title="Rechts uitlijnen">&#9782;</button>
         </div>
         <div id="subtitle-area">
           <input type="text" id="subtitle-input" placeholder="Ondertitel voor deze dia...">
@@ -282,7 +296,7 @@ document.querySelectorAll('#font-select option').forEach(opt=>{opt.style.fontFam
 function addTextBlock(){
   const s=slides[currentSlide];
   if(!s.textBlocks)s.textBlocks=[];
-  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false});
+  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false,align:'left'});
   selectedTB=s.textBlocks.length-1;
   renderTextBlocks();showTbControls();
   // Immediately focus the new text block for editing
@@ -298,8 +312,8 @@ function addTextBlock(){
 
 function renderTextBlocks(){
   const wrap=document.getElementById('preview-wrap');
-  // Remove existing overlays
-  wrap.querySelectorAll('.tb-overlay').forEach(el=>el.remove());
+  // Remove existing overlays and snap guides
+  wrap.querySelectorAll('.tb-overlay,.snap-guide').forEach(el=>el.remove());
   const s=slides[currentSlide];
   if(!s.textBlocks)return;
   const wrapW=wrap.clientWidth,wrapH=wrap.clientHeight;
@@ -314,7 +328,10 @@ function renderTextBlocks(){
     el.style.fontWeight=tb.bold?'700':'400';
     el.style.fontStyle=tb.italic?'italic':'normal';
     el.style.color='#1a1a1a';
-    el.innerHTML=`<div class="tb-text" contenteditable="true">${escHTML(tb.text)}</div><button class="tb-delete" onclick="event.stopPropagation();deleteTextBlock(${idx})">×</button>`;
+    el.style.textAlign=tb.align||'left';
+    // Convert stored newlines to <br> for display
+    const htmlText=escHTML(tb.text).replace(/\n/g,'<br>');
+    el.innerHTML=`<div class="tb-text" contenteditable="true">${htmlText}</div><button class="tb-delete" onclick="event.stopPropagation();deleteTextBlock(${idx})">×</button>`;
     // Click to select
     el.addEventListener('mousedown',e=>{
       if(e.target.classList.contains('tb-delete'))return;
@@ -336,9 +353,9 @@ function renderTextBlocks(){
       e.preventDefault();
       startDragTB(e,idx,scaleX,scaleY);
     });
-    // Update text on input
+    // Update text on input — use innerText to preserve newlines
     el.querySelector('.tb-text').addEventListener('input',e=>{
-      s.textBlocks[idx].text=e.target.textContent;
+      s.textBlocks[idx].text=e.target.innerText;
     });
     wrap.appendChild(el);
   });
@@ -368,6 +385,15 @@ function showTbControls(){
   document.getElementById('tb-size-input').value=tb.size;
   document.getElementById('tb-bold-btn').classList.toggle('active',tb.bold);
   document.getElementById('tb-italic-btn').classList.toggle('active',tb.italic);
+  const al=tb.align||'left';
+  document.getElementById('tb-align-left').classList.toggle('active',al==='left');
+  document.getElementById('tb-align-center').classList.toggle('active',al==='center');
+  document.getElementById('tb-align-right').classList.toggle('active',al==='right');
+}
+function setTbAlign(align){
+  if(selectedTB===null)return;
+  slides[currentSlide].textBlocks[selectedTB].align=align;
+  showTbControls();renderTextBlocks();
 }
 function hideTbControls(){document.getElementById('textblock-controls').classList.remove('visible');}
 
@@ -390,17 +416,56 @@ function toggleTbItalic(){
   document.getElementById('tb-italic-btn').classList.toggle('active',tb.italic);renderTextBlocks();
 }
 
-// Drag text blocks to reposition
+// Drag text blocks to reposition with snap guides
 function startDragTB(e,idx,scaleX,scaleY){
   const tb=slides[currentSlide].textBlocks[idx];
   const startMX=e.clientX,startMY=e.clientY;
   const startX=tb.x,startY=tb.y;
+  const wrap=document.getElementById('preview-wrap');
+  const SNAP_THRESHOLD=15; // in canvas coords (1920x1080)
   function onMove(ev){
-    tb.x=Math.max(0,Math.min(1800,startX+(ev.clientX-startMX)/scaleX));
-    tb.y=Math.max(0,Math.min(1000,startY+(ev.clientY-startMY)/scaleY));
+    let newX=Math.max(0,Math.min(1800,startX+(ev.clientX-startMX)/scaleX));
+    let newY=Math.max(0,Math.min(1000,startY+(ev.clientY-startMY)/scaleY));
+    // Get element dimensions in canvas coords
+    const overlays=document.querySelectorAll('.tb-overlay');
+    const el=overlays[idx];
+    const elW=el?(el.offsetWidth/scaleX):0;
+    const elH=el?(el.offsetHeight/scaleY):0;
+    const centerX=newX+elW/2;
+    const centerY=newY+elH/2;
+    // Snap targets: canvas center (960, 540), thirds, edges
+    const snapXTargets=[960, 0, 1920, 640, 1280];
+    const snapYTargets=[540, 0, 1080, 360, 720];
+    let snappedH=null,snappedV=null;
+    // Check horizontal center snap
+    for(const sx of snapXTargets){
+      if(Math.abs(centerX-sx)<SNAP_THRESHOLD){newX=sx-elW/2;snappedV=sx;break;}
+    }
+    // Check left edge snap
+    if(snappedV===null){for(const sx of snapXTargets){if(Math.abs(newX-sx)<SNAP_THRESHOLD){newX=sx;snappedV=sx;break;}}}
+    // Check vertical center snap
+    for(const sy of snapYTargets){
+      if(Math.abs(centerY-sy)<SNAP_THRESHOLD){newY=sy-elH/2;snappedH=sy;break;}
+    }
+    // Check top edge snap
+    if(snappedH===null){for(const sy of snapYTargets){if(Math.abs(newY-sy)<SNAP_THRESHOLD){newY=sy;snappedH=sy;break;}}}
+    tb.x=newX;tb.y=newY;
     renderTextBlocks();
+    // Draw snap guides
+    wrap.querySelectorAll('.snap-guide').forEach(g=>g.remove());
+    if(snappedV!==null){
+      const g=document.createElement('div');g.className='snap-guide vertical';
+      g.style.left=(snappedV*scaleX)+'px';wrap.appendChild(g);
+    }
+    if(snappedH!==null){
+      const g=document.createElement('div');g.className='snap-guide horizontal';
+      g.style.top=(snappedH*scaleY)+'px';wrap.appendChild(g);
+    }
   }
-  function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);}
+  function onUp(){
+    document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+    wrap.querySelectorAll('.snap-guide').forEach(g=>g.remove());
+  }
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
 }
@@ -518,10 +583,10 @@ function renderPreview(){
     const parser=new DOMParser();const doc=parser.parseFromString(s.originalSVG,'image/svg+xml');const orig=doc.querySelector('svg');
     const vb=orig.getAttribute('viewBox')||`0 0 ${orig.getAttribute('width')||1920} ${orig.getAttribute('height')||1080}`;
     svg.setAttribute('viewBox',vb);svg.innerHTML=orig.innerHTML;
-    svg.querySelectorAll('*').forEach(el=>{if(el.tagName!=='defs'&&el.tagName!=='style'){const f=el.getAttribute('fill');if(f&&f!=='none'&&f!=='transparent'&&f!=='white'&&f!=='#fff'&&f!=='#ffffff'&&el.tagName!=='text')el.setAttribute('fill','none');const st=el.getAttribute('stroke');if(st&&st!=='none')el.setAttribute('stroke-width','4');}});
+    svg.querySelectorAll('*').forEach(el=>{if(el.tagName!=='defs'&&el.tagName!=='style'){const f=el.getAttribute('fill');if(f&&f!=='none'&&f!=='transparent'&&f!=='white'&&f!=='#fff'&&f!=='#ffffff'&&el.tagName!=='text')el.setAttribute('fill','none');const st=el.getAttribute('stroke');if(st&&st!=='none')el.setAttribute('stroke-width','6');}});
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else if(s.svgPath){
-    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${s.svgPath}" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${s.svgPath}" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else{svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML='';zone.classList.remove('has-art');clearBtn.classList.remove('visible');}
   fitPreview();
@@ -735,7 +800,7 @@ function showPresentTextBlocks(idx){
   s.textBlocks.forEach(tb=>{
     const el=document.createElement('div');
     el.className='present-textblock';
-    el.textContent=tb.text;
+    el.innerHTML=escHTML(tb.text).replace(/\n/g,'<br>');
     el.style.left=(cl+tb.x*scaleX)+'px';
     el.style.top=(ct+tb.y*scaleY)+'px';
     el.style.fontFamily=`'${tb.font}', serif`;
@@ -743,6 +808,7 @@ function showPresentTextBlocks(idx){
     el.style.fontWeight=tb.bold?'700':'400';
     el.style.fontStyle=tb.italic?'italic':'normal';
     el.style.color='#1a1a1a';
+    el.style.textAlign=tb.align||'left';
     container.appendChild(el);
     // Fade in after a short delay (text appears after drawing)
     requestAnimationFrame(()=>el.classList.add('visible'));
@@ -765,7 +831,7 @@ function applySubtitleStyle(idx){
 function renderFrame(scrollX){
   pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
   const pts=window._drawnPoints;if(pts.length<2)return;
-  pCtx.save();pCtx.strokeStyle='#1a1a1a';pCtx.lineWidth=4;pCtx.lineCap='round';pCtx.lineJoin='round';
+  pCtx.save();pCtx.strokeStyle='#1a1a1a';pCtx.lineWidth=6;pCtx.lineCap='round';pCtx.lineJoin='round';
   pCtx.beginPath();pCtx.moveTo(pts[0].x-scrollX,pts[0].y);
   for(let i=1;i<pts.length;i++)pCtx.lineTo(pts[i].x-scrollX,pts[i].y);
   pCtx.stroke();pCtx.restore();
@@ -901,7 +967,7 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
   reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.slides?.length>0){
     slides=data.slides.map(s=>({title:s.title||'',subtitle:s.subtitle||'',svgPath:s.svgPath||'',originalSVG:s.originalSVG||'',pathLength:s.pathLength||0,
       subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,subBold:!!s.subBold,subItalic:!!s.subItalic,
-      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic}))}));
+      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left'}))}));
     currentSlide=0;selectSlide(0);}}catch{alert('Ongeldig bestand.');}};
   reader.readAsText(f);e.target.value='';
 });
