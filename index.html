@@ -5,7 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>One Line — Presentaties</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400;1,700&family=Outfit:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=Merriweather:ital,wght@0,400;0,700;1,400;1,700&family=Raleway:ital,wght@0,400;0,700;1,400;1,700&family=Source+Serif+4:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+  /* Cormorant Garamond */
+  @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300;font-display:swap;src:url('assets/fonts/cormorant-garamond-300.woff2') format('woff2')}
+  @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/cormorant-garamond-400.woff2') format('woff2')}
+  @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/cormorant-garamond-600.woff2') format('woff2')}
+  @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/cormorant-garamond-700.woff2') format('woff2')}
+  @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/cormorant-garamond-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/cormorant-garamond-700-italic.woff2') format('woff2')}
+  /* Outfit */
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:200;font-display:swap;src:url('assets/fonts/outfit-200.woff2') format('woff2')}
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:300;font-display:swap;src:url('assets/fonts/outfit-300.woff2') format('woff2')}
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/outfit-400.woff2') format('woff2')}
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:500;font-display:swap;src:url('assets/fonts/outfit-500.woff2') format('woff2')}
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/outfit-600.woff2') format('woff2')}
+  @font-face{font-family:'Outfit';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/outfit-700.woff2') format('woff2')}
+  /* Playfair Display */
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/playfair-display-400.woff2') format('woff2')}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/playfair-display-700.woff2') format('woff2')}
+  @font-face{font-family:'Playfair Display';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/playfair-display-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Playfair Display';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/playfair-display-700-italic.woff2') format('woff2')}
+  /* Lora */
+  @font-face{font-family:'Lora';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/lora-400.woff2') format('woff2')}
+  @font-face{font-family:'Lora';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/lora-700.woff2') format('woff2')}
+  @font-face{font-family:'Lora';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/lora-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Lora';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/lora-700-italic.woff2') format('woff2')}
+  /* Merriweather */
+  @font-face{font-family:'Merriweather';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/merriweather-400.woff2') format('woff2')}
+  @font-face{font-family:'Merriweather';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/merriweather-700.woff2') format('woff2')}
+  @font-face{font-family:'Merriweather';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/merriweather-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Merriweather';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/merriweather-700-italic.woff2') format('woff2')}
+  /* Raleway */
+  @font-face{font-family:'Raleway';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/raleway-400.woff2') format('woff2')}
+  @font-face{font-family:'Raleway';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/raleway-700.woff2') format('woff2')}
+  @font-face{font-family:'Raleway';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/raleway-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Raleway';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/raleway-700-italic.woff2') format('woff2')}
+  /* Source Serif 4 */
+  @font-face{font-family:'Source Serif 4';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/source-serif-4-400.woff2') format('woff2')}
+  @font-face{font-family:'Source Serif 4';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/source-serif-4-700.woff2') format('woff2')}
+  @font-face{font-family:'Source Serif 4';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/source-serif-4-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'Source Serif 4';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/source-serif-4-700-italic.woff2') format('woff2')}
+  /* DM Sans */
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/dm-sans-400.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/dm-sans-700.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/dm-sans-400-italic.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:italic;font-weight:700;font-display:swap;src:url('assets/fonts/dm-sans-700-italic.woff2') format('woff2')}
   *{margin:0;padding:0;box-sizing:border-box}
   :root{--bg:#faf8f4;--ink:#1a1a1a;--ink-light:#888;--accent:#b8602a;--surface:#f0ece4;--border:#e0dbd2;--canvas-bg:#fff}
   body{background:var(--bg);color:var(--ink);font-family:'Outfit',sans-serif;font-weight:300;overflow:hidden;height:100vh;width:100vw}
@@ -102,6 +145,10 @@
   .tb-overlay .tb-delete{position:absolute;top:-10px;right:-10px;width:20px;height:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:12px;line-height:20px;text-align:center;cursor:pointer;opacity:0;transition:opacity .15s}
   .tb-overlay:hover .tb-delete{opacity:1}
   .tb-overlay .tb-delete:hover{background:#c44}
+  .tb-overlay .tb-rotate{position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);width:20px;height:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:11px;line-height:20px;text-align:center;cursor:grab;opacity:0;transition:opacity .15s;user-select:none}
+  .tb-overlay:hover .tb-rotate,.tb-overlay.selected .tb-rotate{opacity:1}
+  .tb-overlay .tb-rotate:hover{background:#a3521f}
+  .tb-overlay .tb-rotate:active{cursor:grabbing}
 
   /* Snap guides */
   .snap-guide{position:absolute;background:var(--accent);opacity:.45;z-index:20;pointer-events:none}
@@ -176,6 +223,10 @@
           <button class="align-btn" id="tb-align-left" onclick="setTbAlign('left')" title="Links uitlijnen">&#9776;</button>
           <button class="align-btn" id="tb-align-center" onclick="setTbAlign('center')" title="Centreren">&#9781;</button>
           <button class="align-btn" id="tb-align-right" onclick="setTbAlign('right')" title="Rechts uitlijnen">&#9782;</button>
+          <div class="t-sep"></div>
+          <span class="tb-label">Rotatie</span>
+          <input type="number" class="size-input" id="tb-rotation-input" value="0" min="-360" max="360" title="Rotatie in graden" style="width:58px">
+          <span style="font-size:10px;color:var(--ink-light)">°</span>
         </div>
         <div id="subtitle-area">
           <input type="text" id="subtitle-input" placeholder="Ondertitel voor deze dia...">
@@ -300,7 +351,7 @@ document.querySelectorAll('#font-select option').forEach(opt=>{opt.style.fontFam
 function addTextBlock(){
   const s=slides[currentSlide];
   if(!s.textBlocks)s.textBlocks=[];
-  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false,align:'left'});
+  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false,align:'left',rotation:0});
   selectedTB=s.textBlocks.length-1;
   renderTextBlocks();showTbControls();
   // Immediately focus the new text block for editing
@@ -333,9 +384,10 @@ function renderTextBlocks(){
     el.style.fontStyle=tb.italic?'italic':'normal';
     el.style.color='#1a1a1a';
     el.style.textAlign=tb.align||'left';
+    if(tb.rotation)el.style.transform=`rotate(${tb.rotation}deg)`;
     // Convert stored newlines to <br> for display
     const htmlText=escHTML(tb.text).replace(/\n/g,'<br>');
-    el.innerHTML=`<div class="tb-text" contenteditable="true">${htmlText}</div><button class="tb-delete" onclick="event.stopPropagation();deleteTextBlock(${idx})">×</button>`;
+    el.innerHTML=`<div class="tb-text" contenteditable="true">${htmlText}</div><button class="tb-delete" onclick="event.stopPropagation();deleteTextBlock(${idx})">×</button><button class="tb-rotate" onmousedown="event.stopPropagation();startRotateTB(event,${idx})" title="Sleep om te roteren">↻</button>`;
     // Click to select
     el.addEventListener('mousedown',e=>{
       if(e.target.classList.contains('tb-delete'))return;
@@ -393,6 +445,7 @@ function showTbControls(){
   document.getElementById('tb-align-left').classList.toggle('active',al==='left');
   document.getElementById('tb-align-center').classList.toggle('active',al==='center');
   document.getElementById('tb-align-right').classList.toggle('active',al==='right');
+  document.getElementById('tb-rotation-input').value=tb.rotation||0;
 }
 function setTbAlign(align){
   if(selectedTB===null)return;
@@ -418,6 +471,47 @@ function toggleTbItalic(){
   if(selectedTB===null)return;
   const tb=slides[currentSlide].textBlocks[selectedTB];tb.italic=!tb.italic;
   document.getElementById('tb-italic-btn').classList.toggle('active',tb.italic);renderTextBlocks();
+}
+
+document.getElementById('tb-rotation-input').addEventListener('input',e=>{
+  if(selectedTB===null)return;
+  const v=parseInt(e.target.value);if(v>=-360&&v<=360){slides[currentSlide].textBlocks[selectedTB].rotation=v;renderTextBlocks();}
+});
+
+// Rotate text blocks by dragging the rotate handle
+function startRotateTB(e,idx){
+  e.preventDefault();
+  const tb=slides[currentSlide].textBlocks[idx];
+  const wrap=document.getElementById('preview-wrap');
+  const wrapW=wrap.clientWidth,wrapH=wrap.clientHeight;
+  const scaleX=wrapW/1920,scaleY=wrapH/1080;
+  // Calculate center of text block in screen coords
+  const overlays=document.querySelectorAll('.tb-overlay');
+  const el=overlays[idx];
+  if(!el)return;
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2;
+  const cy=rect.top+rect.height/2;
+  const startAngle=Math.atan2(e.clientY-cy,e.clientX-cx);
+  const startRotation=tb.rotation||0;
+  function onMove(ev){
+    const angle=Math.atan2(ev.clientY-cy,ev.clientX-cx);
+    let deg=startRotation+(angle-startAngle)*(180/Math.PI);
+    // Snap to 0, 90, 180, 270, -90, -180 when close
+    const snapAngles=[0,45,90,135,180,225,270,315,-45,-90,-135,-180,-225,-270,-315];
+    for(const sa of snapAngles){if(Math.abs(deg-sa)<5){deg=sa;break;}}
+    // Normalize to -360..360
+    deg=Math.round(deg%360);
+    tb.rotation=deg;
+    renderTextBlocks();
+    document.getElementById('tb-rotation-input').value=deg;
+  }
+  function onUp(){
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+  }
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
 }
 
 // Drag text blocks to reposition with snap guides
@@ -840,6 +934,7 @@ function showPresentTextBlocks(idx){
     el.style.fontStyle=tb.italic?'italic':'normal';
     el.style.color='#1a1a1a';
     el.style.textAlign=tb.align||'left';
+    if(tb.rotation)el.style.transform=`rotate(${tb.rotation}deg)`;
     container.appendChild(el);
     // Fade in after a short delay (text appears after drawing)
     requestAnimationFrame(()=>el.classList.add('visible'));
@@ -1010,7 +1105,7 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
   reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.slides?.length>0){
     slides=data.slides.map(s=>({title:s.title||'',subtitle:s.subtitle||'',svgPath:s.svgPath||'',originalSVG:s.originalSVG||'',pathLength:s.pathLength||0,
       subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,subBold:!!s.subBold,subItalic:!!s.subItalic,
-      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left'}))}));
+      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x||50,y:tb.y||50,font:tb.font||'Cormorant Garamond',size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left',rotation:tb.rotation||0}))}));
     currentSlide=0;selectSlide(0);}}catch{alert('Ongeldig bestand.');}};
   reader.readAsText(f);e.target.value='';
 });
