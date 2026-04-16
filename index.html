@@ -2442,7 +2442,7 @@ function fitPreview(){
   if(w/h>ratio)w=h*ratio;else h=w/ratio;w=Math.max(w,200);h=Math.max(h,120);
   wrap.style.width=w+'px';wrap.style.height=h+'px';svg.setAttribute('width',w);svg.setAttribute('height',h);
 }
-window.addEventListener('resize',()=>{fitPreview();updateSubtitlePreview();renderTextBlocks();});setTimeout(()=>{fitPreview();updateSubtitlePreview();},100);
+window.addEventListener('resize',()=>{fitPreview();updateSubtitlePreview();renderTextBlocks();renderMediaBlocks();});setTimeout(()=>{fitPreview();updateSubtitlePreview();renderMediaBlocks();},100);
 
 function measurePath(d){
   const t=document.createElementNS('http://www.w3.org/2000/svg','svg');t.setAttribute('viewBox','0 0 1920 1080');t.style.cssText='position:absolute;left:-9999px;width:0;height:0';
