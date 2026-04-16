@@ -230,9 +230,9 @@
   .slide-thumb .duplicate-btn:hover{color:var(--accent)}
 
   /* Media block overlays in editor */
-  .media-overlay{position:absolute;cursor:move;border:1.5px dashed transparent;border-radius:4px;user-select:none;transition:border-color .15s,box-shadow .15s;overflow:visible}
-  .media-overlay:hover{border-color:var(--accent)}
-  .media-overlay.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(184,96,42,.15)}
+  .media-overlay{position:absolute;cursor:move;outline:1.5px dashed transparent;outline-offset:-1.5px;border-radius:4px;user-select:none;transition:outline-color .15s,box-shadow .15s;overflow:visible}
+  .media-overlay:hover{outline-color:var(--accent)}
+  .media-overlay.selected{outline-color:var(--accent);box-shadow:0 0 0 2px rgba(184,96,42,.15)}
   .media-overlay img,.media-overlay video{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;border-radius:3px}
   .media-overlay .media-delete{position:absolute;bottom:-28px;left:calc(50% + 16px);width:18px;height:18px;background:#c44;color:#fff;border:2px solid #fff;border-radius:50%;font-size:11px;line-height:14px;text-align:center;cursor:pointer;opacity:1;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.2);padding:0}
   .media-overlay .media-delete:hover{background:#a33}
@@ -1735,50 +1735,77 @@ function rebuildSvgTextSrc(mb){
 // Get screen-space start/end points for svgtext line extensions
 // Reads actual SVG path start/end coordinates for precise alignment
 // SVG uses preserveAspectRatio="xMinYMin meet" so content aligns to top-left (no offset)
-function getSvgTextScreenEndpoints(mb,wrapW,wrapH){
+function getSvgTextScreenEndpoints(mb,wrapW,wrapH,domSvgEl){
+  // When a live DOM SVG element is available (editor), use exact CTM positioning
+  if(domSvgEl&&domSvgEl.getScreenCTM){
+    try{
+      const ctm=domSvgEl.getScreenCTM();
+      if(ctm){
+        const wrap=document.getElementById('preview-wrap');
+        const wr=wrap.getBoundingClientRect();
+        const scX=wrap.clientWidth/1920,scY=wrap.clientHeight/1080;
+        const visDom=[...domSvgEl.querySelectorAll('path:not([data-invisible])')];
+        if(visDom.length>0){
+          const mkPt=(x,y)=>{const p=domSvgEl.createSVGPoint();p.x=x;p.y=y;return p.matrixTransform(ctm);};
+          // Start: first visible path, point at length 0
+          const fp=visDom[0];const fpLen=fp.getTotalLength();
+          const sp=fp.getPointAtLength(0);const ss=mkPt(sp.x,sp.y);
+          // Start tangent: point slightly along the path
+          const sp2=fp.getPointAtLength(Math.min(fpLen*0.15,8));
+          // Finish: last visible path, point at total length
+          const lp=visDom[visDom.length-1];const lpLen=lp.getTotalLength();
+          const ep=lp.getPointAtLength(lpLen);const es=mkPt(ep.x,ep.y);
+          // Finish tangent: point slightly before the end
+          const ep2=lp.getPointAtLength(Math.max(0,lpLen-Math.min(lpLen*0.15,8)));
+          // Tangent directions in SVG space (uniform scale, direction preserved)
+          let stX=sp2.x-sp.x,stY=sp2.y-sp.y,ftX=ep.x-ep2.x,ftY=ep.y-ep2.y;
+          const stL=Math.hypot(stX,stY)||1,ftL=Math.hypot(ftX,ftY)||1;
+          return{
+            startScreenX:(ss.x-wr.left)/scX,baselineScreenY:(ss.y-wr.top)/scY,
+            finishScreenX:(es.x-wr.left)/scX,finishScreenY:(es.y-wr.top)/scY,
+            startTanX:stX/stL,startTanY:stY/stL,finishTanX:ftX/ftL,finishTanY:ftY/ftL
+          };
+        }
+      }
+    }catch(e){}
+  }
+  // Fallback: math-based computation (presentation mode / export)
   const doc2=new DOMParser().parseFromString(mb.src,'image/svg+xml');const svgEl=doc2.querySelector('svg');
   const vb=(svgEl?.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
   const vbX=vb[0],vbY=vb[1],vbW=vb[2],vbH=vb[3];
-  // When wrapW/wrapH provided (preview mode), account for media-overlay border
-  // with box-sizing:border-box (CSS line 233: border:1.5px dashed transparent)
-  let scale,offsetX=0,offsetY=0;
-  if(wrapW!==undefined&&wrapH!==undefined){
-    const borderPx=1.5;
-    const scaleX=wrapW/1920,scaleY=wrapH/1080;
-    // Content dimensions in 1920x1080 units (subtract border in those units)
-    scale=Math.min((mb.width-2*borderPx/scaleX)/vbW,(mb.height-2*borderPx/scaleY)/vbH);
-    offsetX=borderPx/scaleX;
-    offsetY=borderPx/scaleY;
-  }else{
-    scale=Math.min(mb.width/vbW,mb.height/vbH);
-  }
-  // Find actual first and last visible path start/end points from SVG
+  const scale=Math.min(mb.width/vbW,mb.height/vbH);
   const visiblePaths=[...doc2.querySelectorAll('path:not([data-invisible])')];
   let startSvgX=0,startSvgY=140,finishSvgX=0,finishSvgY=140;
   let startTanX=0,startTanY=0,finishTanX=0,finishTanY=0;
   if(visiblePaths.length>0){
-    // First visible path → start point (M command) + tangent
     const firstD=visiblePaths[0].getAttribute('d')||'';
     const firstM=firstD.match(/^M\s*([-\d.]+)[,\s]*([-\d.]+)/i);
     if(firstM){startSvgX=parseFloat(firstM[1]);startSvgY=parseFloat(firstM[2]);}
     const firstPts=fastSamplePath(firstD.replace(/[Zz]/g,''),50);
     if(firstPts&&firstPts.length>=2){const si=Math.min(3,firstPts.length-1);startTanX=firstPts[si].x-firstPts[0].x;startTanY=firstPts[si].y-firstPts[0].y;}
-    // Last visible path → end point + tangent (trace through path)
     const lastD=visiblePaths[visiblePaths.length-1].getAttribute('d')||'';
     const lastPts=fastSamplePath(lastD.replace(/[Zz]/g,''),50);
     if(lastPts&&lastPts.length>0){const lp=lastPts[lastPts.length-1];finishSvgX=lp.x;finishSvgY=lp.y;}
     if(lastPts&&lastPts.length>=2){const ei=lastPts.length-1,fi=Math.max(0,ei-3);finishTanX=lastPts[ei].x-lastPts[fi].x;finishTanY=lastPts[ei].y-lastPts[fi].y;}
   }
-  const startScreenX=mb.x+offsetX+(startSvgX-vbX)*scale;
-  const finishScreenX=mb.x+offsetX+(finishSvgX-vbX)*scale;
-  const startScreenY=mb.y+offsetY+(startSvgY-vbY)*scale;
-  const finishScreenY=mb.y+offsetY+(finishSvgY-vbY)*scale;
-  // Normalize tangent directions
+  const startScreenX=mb.x+(startSvgX-vbX)*scale;
+  const finishScreenX=mb.x+(finishSvgX-vbX)*scale;
+  const startScreenY=mb.y+(startSvgY-vbY)*scale;
+  const finishScreenY=mb.y+(finishSvgY-vbY)*scale;
   const stLen=Math.hypot(startTanX,startTanY)||1;
   const ftLen=Math.hypot(finishTanX,finishTanY)||1;
   return{startScreenX,finishScreenX,baselineScreenY:startScreenY,finishScreenY,
     startTanX:startTanX/stLen,startTanY:startTanY/stLen,
     finishTanX:finishTanX/ftLen,finishTanY:finishTanY/ftLen};
+}
+
+// Find live DOM SVG element for a media block index
+function getDomSvgForMb(mbIdx){
+  const wrap=document.getElementById('preview-wrap');
+  if(!wrap)return null;
+  const overlays=wrap.querySelectorAll('.media-overlay');
+  const el=overlays[mbIdx];
+  return el?el.querySelector('svg'):null;
 }
 
 /* ── Bezier Path Utilities ── */
@@ -1855,7 +1882,7 @@ function startPenTool(mbIdx,side){
   const wrap=document.getElementById('preview-wrap');
   const s=slides[currentSlide];
   const mb=s.mediaBlocks[mbIdx];
-  const pts=getSvgTextScreenEndpoints(mb,wrap.clientWidth,wrap.clientHeight);
+  const pts=getSvgTextScreenEndpoints(mb,wrap.clientWidth,wrap.clientHeight,getDomSvgForMb(mbIdx));
   penToolActive=true;penToolMbIdx=mbIdx;penToolSide=side;
   const TAN_HANDLE=80;
   if(side==='left'){
@@ -1968,7 +1995,7 @@ function cleanupPenTool(){
 }
 
 function renderExtensionLines(mb,wrap,wrapW,wrapH,mbIdx){
-  const epts=getSvgTextScreenEndpoints(mb,wrapW,wrapH);
+  const epts=getSvgTextScreenEndpoints(mb,wrapW,wrapH,getDomSvgForMb(mbIdx));
   ['left','right'].forEach(side=>{
     const path=side==='left'?mb.lineLeftPath:mb.lineRightPath;
     if(!path||path.length<2)return;
@@ -2107,7 +2134,7 @@ function startAnchorDrag(e,mbIdx,side,pointIdx,scaleX,scaleY){
     let y=(ev.clientY-r.top)*(1080/wrap.clientHeight);
     // First point: only vertical
     if(pointIdx===0){
-      const pts=getSvgTextScreenEndpoints(mb);
+      const pts=getSvgTextScreenEndpoints(mb,wrap.clientWidth,wrap.clientHeight,getDomSvgForMb(mbIdx));
       x=side==='left'?pts.startScreenX:pts.finishScreenX;
     }
     // Snap to edges
