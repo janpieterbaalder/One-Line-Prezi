@@ -1761,13 +1761,13 @@ function getSvgTextScreenEndpoints(mb,wrapW,wrapH){
     const firstD=visiblePaths[0].getAttribute('d')||'';
     const firstM=firstD.match(/^M\s*([-\d.]+)[,\s]*([-\d.]+)/i);
     if(firstM){startSvgX=parseFloat(firstM[1]);startSvgY=parseFloat(firstM[2]);}
-    const firstPts=fastSamplePath(firstD.replace(/[Zz]/g,''),20);
-    if(firstPts&&firstPts.length>=2){startTanX=firstPts[1].x-firstPts[0].x;startTanY=firstPts[1].y-firstPts[0].y;}
+    const firstPts=fastSamplePath(firstD.replace(/[Zz]/g,''),50);
+    if(firstPts&&firstPts.length>=2){const si=Math.min(3,firstPts.length-1);startTanX=firstPts[si].x-firstPts[0].x;startTanY=firstPts[si].y-firstPts[0].y;}
     // Last visible path → end point + tangent (trace through path)
     const lastD=visiblePaths[visiblePaths.length-1].getAttribute('d')||'';
-    const lastPts=fastSamplePath(lastD.replace(/[Zz]/g,''),20);
+    const lastPts=fastSamplePath(lastD.replace(/[Zz]/g,''),50);
     if(lastPts&&lastPts.length>0){const lp=lastPts[lastPts.length-1];finishSvgX=lp.x;finishSvgY=lp.y;}
-    if(lastPts&&lastPts.length>=2){finishTanX=lastPts[lastPts.length-1].x-lastPts[lastPts.length-2].x;finishTanY=lastPts[lastPts.length-1].y-lastPts[lastPts.length-2].y;}
+    if(lastPts&&lastPts.length>=2){const ei=lastPts.length-1,fi=Math.max(0,ei-3);finishTanX=lastPts[ei].x-lastPts[fi].x;finishTanY=lastPts[ei].y-lastPts[fi].y;}
   }
   const startScreenX=mb.x+offsetX+(startSvgX-vbX)*scale;
   const finishScreenX=mb.x+offsetX+(finishSvgX-vbX)*scale;
@@ -2523,15 +2523,22 @@ function sampleAllSlides(){
         const epts=getSvgTextScreenEndpoints(mb);
         let leftArcLen=0,rightArcLen=0,leftSampled=null,rightSampled=null;
         if(mb.lineLeftPath&&mb.lineLeftPath.length>=2){
-          const pathCopy=mb.lineLeftPath.map(p=>({...p}));
-          pathCopy[0]={x:epts.startScreenX,y:epts.baselineScreenY};
+          const pathCopy=mb.lineLeftPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
+          const dx0=epts.startScreenX-pathCopy[0].x,dy0=epts.baselineScreenY-pathCopy[0].y;
+          pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
+          if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
+          if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
           const rough=sampleBezierPath(pathCopy,100);
           for(let j=1;j<rough.length;j++){leftArcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
           leftSampled={pathCopy,color:mb.lineLeftColor||'#1a1a1a'};
         }
         if(mb.lineRightPath&&mb.lineRightPath.length>=2){
-          const pathCopy=mb.lineRightPath.map(p=>({...p}));
-          pathCopy[0]={x:epts.finishScreenX,y:epts.finishScreenY||epts.baselineScreenY};
+          const pathCopy=mb.lineRightPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
+          const ny0=epts.finishScreenY||epts.baselineScreenY;
+          const dx0=epts.finishScreenX-pathCopy[0].x,dy0=ny0-pathCopy[0].y;
+          pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
+          if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
+          if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
           const rough=sampleBezierPath(pathCopy,100);
           for(let j=1;j<rough.length;j++){rightArcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
           rightSampled={pathCopy,color:mb.lineRightColor||'#1a1a1a'};
@@ -3258,8 +3265,11 @@ async function exportStandaloneHTML(){
           // Left extension line points — animate from screen edge TO text
           if(mb.lineLeftPath&&mb.lineLeftPath.length>=2){
             const epts=getSvgTextScreenEndpoints(mb);
-            const pathCopy=mb.lineLeftPath.map(p=>({...p}));
-            pathCopy[0]={x:epts.startScreenX,y:epts.baselineScreenY};
+            const pathCopy=mb.lineLeftPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
+            const dx0=epts.startScreenX-pathCopy[0].x,dy0=epts.baselineScreenY-pathCopy[0].y;
+            pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
+            if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
+            if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
             const lineColor=mb.lineLeftColor||'#1a1a1a';
             const rough=sampleBezierPath(pathCopy,100);
             let arcLen=0;for(let j=1;j<rough.length;j++){arcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
@@ -3280,8 +3290,12 @@ async function exportStandaloneHTML(){
           // Right extension line points
           if(mb.lineRightPath&&mb.lineRightPath.length>=2){
             const epts=getSvgTextScreenEndpoints(mb);
-            const pathCopy=mb.lineRightPath.map(p=>({...p}));
-            pathCopy[0]={x:epts.finishScreenX,y:epts.finishScreenY||epts.baselineScreenY};
+            const pathCopy=mb.lineRightPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
+            const ny0=epts.finishScreenY||epts.baselineScreenY;
+            const dx0=epts.finishScreenX-pathCopy[0].x,dy0=ny0-pathCopy[0].y;
+            pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
+            if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
+            if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
             const rightColor=mb.lineRightColor||'#1a1a1a';
             const rough=sampleBezierPath(pathCopy,100);
             let arcLen=0;for(let j=1;j<rough.length;j++){arcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
