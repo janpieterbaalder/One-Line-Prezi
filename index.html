@@ -1755,21 +1755,30 @@ function getSvgTextScreenEndpoints(mb,wrapW,wrapH){
   // Find actual first and last visible path start/end points from SVG
   const visiblePaths=[...doc2.querySelectorAll('path:not([data-invisible])')];
   let startSvgX=0,startSvgY=140,finishSvgX=0,finishSvgY=140;
+  let startTanX=0,startTanY=0,finishTanX=0,finishTanY=0;
   if(visiblePaths.length>0){
-    // First visible path → start point (M command)
+    // First visible path → start point (M command) + tangent
     const firstD=visiblePaths[0].getAttribute('d')||'';
     const firstM=firstD.match(/^M\s*([-\d.]+)[,\s]*([-\d.]+)/i);
     if(firstM){startSvgX=parseFloat(firstM[1]);startSvgY=parseFloat(firstM[2]);}
-    // Last visible path → end point (trace through path)
+    const firstPts=fastSamplePath(firstD.replace(/[Zz]/g,''),20);
+    if(firstPts&&firstPts.length>=2){startTanX=firstPts[1].x-firstPts[0].x;startTanY=firstPts[1].y-firstPts[0].y;}
+    // Last visible path → end point + tangent (trace through path)
     const lastD=visiblePaths[visiblePaths.length-1].getAttribute('d')||'';
     const lastPts=fastSamplePath(lastD.replace(/[Zz]/g,''),20);
     if(lastPts&&lastPts.length>0){const lp=lastPts[lastPts.length-1];finishSvgX=lp.x;finishSvgY=lp.y;}
+    if(lastPts&&lastPts.length>=2){finishTanX=lastPts[lastPts.length-1].x-lastPts[lastPts.length-2].x;finishTanY=lastPts[lastPts.length-1].y-lastPts[lastPts.length-2].y;}
   }
   const startScreenX=mb.x+offsetX+(startSvgX-vbX)*scale;
   const finishScreenX=mb.x+offsetX+(finishSvgX-vbX)*scale;
   const startScreenY=mb.y+offsetY+(startSvgY-vbY)*scale;
   const finishScreenY=mb.y+offsetY+(finishSvgY-vbY)*scale;
-  return{startScreenX,finishScreenX,baselineScreenY:startScreenY,finishScreenY};
+  // Normalize tangent directions
+  const stLen=Math.hypot(startTanX,startTanY)||1;
+  const ftLen=Math.hypot(finishTanX,finishTanY)||1;
+  return{startScreenX,finishScreenX,baselineScreenY:startScreenY,finishScreenY,
+    startTanX:startTanX/stLen,startTanY:startTanY/stLen,
+    finishTanX:finishTanX/ftLen,finishTanY:finishTanY/ftLen};
 }
 
 /* ── Bezier Path Utilities ── */
@@ -1848,10 +1857,17 @@ function startPenTool(mbIdx,side){
   const mb=s.mediaBlocks[mbIdx];
   const pts=getSvgTextScreenEndpoints(mb,wrap.clientWidth,wrap.clientHeight);
   penToolActive=true;penToolMbIdx=mbIdx;penToolSide=side;
+  const TAN_HANDLE=80;
   if(side==='left'){
-    penToolPoints=[{x:pts.startScreenX,y:pts.baselineScreenY}];
+    const px=pts.startScreenX,py=pts.baselineScreenY;
+    // Extension goes opposite to letter's start direction
+    const hx=-pts.startTanX*TAN_HANDLE,hy=-pts.startTanY*TAN_HANDLE;
+    penToolPoints=[{x:px,y:py,cpIn:{x:px-hx,y:py-hy},cpOut:{x:px+hx,y:py+hy}}];
   }else{
-    penToolPoints=[{x:pts.finishScreenX,y:pts.finishScreenY||pts.baselineScreenY}];
+    const px=pts.finishScreenX,py=pts.finishScreenY||pts.baselineScreenY;
+    // Extension continues letter's end direction
+    const hx=pts.finishTanX*TAN_HANDLE,hy=pts.finishTanY*TAN_HANDLE;
+    penToolPoints=[{x:px,y:py,cpIn:{x:px-hx,y:py-hy},cpOut:{x:px+hx,y:py+hy}}];
   }
   wrap.classList.add('pen-mode');
   const bar=document.createElement('div');bar.className='pen-status-bar';bar.id='pen-status';
@@ -1957,8 +1973,19 @@ function renderExtensionLines(mb,wrap,wrapW,wrapH,mbIdx){
     const path=side==='left'?mb.lineLeftPath:mb.lineRightPath;
     if(!path||path.length<2)return;
     // Keep first point synced to text endpoint (border-corrected via wrapW/wrapH)
-    if(side==='left'){path[0].x=epts.startScreenX;path[0].y=epts.baselineScreenY;}
-    else{path[0].x=epts.finishScreenX;path[0].y=epts.finishScreenY||epts.baselineScreenY;}
+    // Move handles along with anchor so user adjustments are preserved
+    if(side==='left'){
+      const dx=epts.startScreenX-path[0].x,dy=epts.baselineScreenY-path[0].y;
+      if(path[0].cpIn){path[0].cpIn.x+=dx;path[0].cpIn.y+=dy;}
+      if(path[0].cpOut){path[0].cpOut.x+=dx;path[0].cpOut.y+=dy;}
+      path[0].x=epts.startScreenX;path[0].y=epts.baselineScreenY;
+    }else{
+      const ny=epts.finishScreenY||epts.baselineScreenY;
+      const dx=epts.finishScreenX-path[0].x,dy=ny-path[0].y;
+      if(path[0].cpIn){path[0].cpIn.x+=dx;path[0].cpIn.y+=dy;}
+      if(path[0].cpOut){path[0].cpOut.x+=dx;path[0].cpOut.y+=dy;}
+      path[0].x=epts.finishScreenX;path[0].y=ny;
+    }
     const d=bezierPathToSVG(path);
     const colorProp=side==='left'?'lineLeftColor':'lineRightColor';
     const color=mb[colorProp]||'#1a1a1a';
