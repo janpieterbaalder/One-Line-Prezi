@@ -300,6 +300,11 @@
   .present-media{position:absolute;opacity:0;z-index:101;pointer-events:none}
   .present-media.visible{opacity:1}
   .present-media img,.present-media video,.present-media iframe{display:block;width:100%;height:100%;border:none;border-radius:0}
+  .yt-thumb{position:relative;width:100%;height:100%;cursor:pointer;background:#000;overflow:hidden}
+  .yt-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.85);border-radius:14px;pointer-events:none}
+  .yt-thumb .yt-play-btn::after{content:'';position:absolute;top:50%;left:54%;transform:translate(-50%,-50%);border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #fff}
+  .yt-thumb:hover .yt-play-btn{background:rgba(255,0,0,1)}
 
   /* YouTube dialog */
   .yt-dialog{position:fixed;inset:0;background:rgba(10,4,32,.5);z-index:300;display:flex;align-items:center;justify-content:center}
@@ -665,6 +670,8 @@
 
 <!-- Ingebouwde one-line-art bibliotheek (gegenereerd door tools/build-svglibrary.js) -->
 <script src="assets/svglibrary.js"></script>
+<!-- Ingesloten one-line-font (gegenereerd door tools/build-onelinefont.js) -->
+<script src="assets/onelinefont.js"></script>
 
 <script>
 // ============================================================
@@ -1422,7 +1429,8 @@ function showPresentMediaBlocks(idx){
       const autoplay=mb.autoplay!==false;
       el.innerHTML=`<video src="${mb.src}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
     } else if(mb.type==='youtube'){
-      el.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${mb.src}?autoplay=1&rel=0&origin=null" allow="autoplay;encrypted-media" allowfullscreen style="pointer-events:auto"></iframe>`;
+      el.style.pointerEvents='auto';
+      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}')"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
     }
     container.appendChild(el);
     el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');
@@ -1434,6 +1442,15 @@ function stopPresentMediaBlocks(){
   // Stop all videos
   container.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
   container.innerHTML='';
+}
+
+// Klik-om-af-te-spelen voor YouTube in de presentatie. Geen autoplay-iframe
+// vooraf (faalt onder file:// in de desktop-app); de klik levert het
+// benodigde gebruikersgebaar en we sturen geen ongeldige origin meer mee.
+function playPresentYouTube(el,id){
+  const wrap=el.parentElement;
+  wrap.style.pointerEvents='auto';
+  wrap.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"></iframe>`;
 }
 
 // Color controls: background, line, subtitle
@@ -1885,19 +1902,26 @@ function processSVGUpload(svgText){
 const oneLineFont={};
 async function loadOneLineFont(){
   try{
-    let files;
-    try{const r=await fetch('/api/font-files');if(r.ok)files=await r.json();}catch(e){}
-    if(!files){const r=await fetch('assets/onelinefont/manifest.json');files=await r.json();}
+    // Voorkeur: ingesloten font-data (werkt onder file:// in de desktop-app).
+    let entries=window.ONE_LINE_FONT_DATA;
+    if(!entries){
+      // Fallback voor dev-server / oudere builds: via fetch.
+      let files;
+      try{const r=await fetch('/api/font-files');if(r.ok)files=await r.json();}catch(e){}
+      if(!files){const r=await fetch('assets/onelinefont/manifest.json');files=await r.json();}
+      entries=[];
+      for(const fn of files){const r=await fetch('assets/onelinefont/'+encodeURIComponent(fn));entries.push({file:fn,svg:await r.text()});}
+    }
     const metaRe=/kleine\s+(\S+)\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
     const spaceRe=/spatie\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
-    for(const fn of files){
+    for(const ent of entries){
+      const fn=ent.file;
       let letter,m=fn.match(metaRe),isSpace=false;
       if(m){letter=m[1];}
       else{m=fn.match(spaceRe);if(m){letter=' ';isSpace=true;m=[null,...m];}else continue;}
       const parseXY=s=>{const[x,y]=s.split(',').map(Number);return{x,y};};
       const lo=parseXY(m[2]),ro=parseXY(m[3]),s=parseXY(m[4]),f=parseXY(m[5]);
-      const svgRes=await fetch('assets/onelinefont/'+encodeURIComponent(fn));
-      const svgText=await svgRes.text();
+      const svgText=ent.svg;
       const doc=new DOMParser().parseFromString(svgText,'image/svg+xml');
       const allPaths=doc.querySelectorAll('path');
       if(!allPaths.length)continue;

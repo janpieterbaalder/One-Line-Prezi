@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-1.3.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.4.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)
@@ -105,6 +105,17 @@ online versie. Je kunt ze dus op elke computer kiezen via de knop **◫ Biblioth
 > De bestandsnaam wordt automatisch de weergavenaam (een afsluitend nummer zoals
 > `-01` wordt weggelaten). Pas namen desgewenst aan in `assets/svglibrary/manifest.json`;
 > die blijven bij een volgende `npm run build:svglib` behouden.
+
+### ▒ ONE LINE FONT ▒
+
+Het handgeschreven **one-line-font** ("Tekst als pad") zit eveneens ingesloten
+(`assets/onelinefont.js`), zodat het ook in de desktop-app (`file://`) en op elke
+computer werkt — zonder netwerk. Tekens aanpassen of toevoegen in
+`assets/onelinefont/` en daarna opnieuw genereren:
+
+```bash
+npm run build:font
+```
 
 ---
 
