@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-1.4.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.4.1-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)

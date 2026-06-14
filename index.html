@@ -3746,11 +3746,7 @@ function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 function isLightColor(hex){const c=hex.replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return(r*299+g*587+b*114)/1000>128;}
 
 function playYouTube(el,id){
-  if(window.location.protocol==='file:'){
-    window.open('https://www.youtube.com/watch?v='+id,'_blank');
-  }else{
-    el.parentElement.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&origin='+encodeURIComponent(window.location.origin)+'" allow="autoplay;encrypted-media" allowfullscreen style="pointer-events:auto"><\\/iframe>';
-  }
+  el.parentElement.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"><\\/iframe>';
 }
 
 function fitPresentCanvas(){
