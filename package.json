@@ -1,11 +1,12 @@
 {
   "name": "one-line-presentaties",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "One Line — One line art presentaties",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "build:svglib": "node tools/build-svglibrary.js"
   },
   "author": "Baalderborg Groep",
   "license": "UNLICENSED",

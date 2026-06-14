@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-2.1.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.3.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)
@@ -43,6 +43,7 @@
 │  ♡  FEATURES.sys                              [_][□][×] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
+│  ✧  Ingebouwde one-line-art bibliotheek  (NIEUW)        │
 │  ✧  SVG one-line art upload  (drag & drop)              │
 │  ✧  Kleur per pad — onbeperkt saved palette             │
 │  ✧  Tekstblokken, afbeeldingen, video's, YouTube        │
@@ -62,8 +63,8 @@
 
 ```bash
 # Clone deze repo
-git clone https://github.com/<user>/one-line-prezi.git
-cd one-line-prezi
+git clone https://github.com/janpieterbaalder/One-Line-Prezi.git
+cd One-Line-Prezi
 
 # Installeer dependencies
 npm install
@@ -78,6 +79,32 @@ npm start
 npm run build
 ```
 Het installatiebestand verschijnt in `./dist/`.
+
+---
+
+## ▓ BIBLIOTHEEK ▓
+
+De one-line-art afbeeldingen zitten **standaard ingesloten** in de app én in de
+online versie. Je kunt ze dus op elke computer kiezen via de knop **◫ Bibliotheek**
+— geen losse bestanden nodig.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ◫  Eigen afbeeldingen toevoegen aan de bibliotheek       │
+├─────────────────────────────────────────────────────────┤
+│  1.  Zet je .svg-bestanden in  assets/svglibrary/         │
+│  2.  Genereer de bibliotheek opnieuw:                     │
+│                                                           │
+│         npm run build:svglib                              │
+│                                                           │
+│      → schrijft assets/svglibrary.js + manifest.json      │
+│  3.  Start de app — de nieuwe art staat in de bibliotheek │
+└─────────────────────────────────────────────────────────┘
+```
+
+> De bestandsnaam wordt automatisch de weergavenaam (een afsluitend nummer zoals
+> `-01` wordt weggelaten). Pas namen desgewenst aan in `assets/svglibrary/manifest.json`;
+> die blijven bij een volgende `npm run build:svglib` behouden.
 
 ---
 

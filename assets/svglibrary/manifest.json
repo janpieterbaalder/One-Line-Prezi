@@ -1,0 +1,106 @@
+[
+  {
+    "name": "Anker",
+    "file": "anker-01-01.svg"
+  },
+  {
+    "name": "Appel",
+    "file": "appel.svg"
+  },
+  {
+    "name": "Autonomie",
+    "file": "autonomie.svg"
+  },
+  {
+    "name": "Bed",
+    "file": "bed.svg"
+  },
+  {
+    "name": "Boek",
+    "file": "boek.svg"
+  },
+  {
+    "name": "Boeken",
+    "file": "boeken.svg"
+  },
+  {
+    "name": "Bullitpoints",
+    "file": "bullitpoints.svg"
+  },
+  {
+    "name": "Diamant model Leget",
+    "file": "diamant-model-leget.svg"
+  },
+  {
+    "name": "Dimensies Nolan",
+    "file": "dimensies-nolan.svg"
+  },
+  {
+    "name": "Gesprek",
+    "file": "gesprek.svg"
+  },
+  {
+    "name": "Gesprek4",
+    "file": "gesprek4.svg"
+  },
+  {
+    "name": "Hand",
+    "file": "hand.svg"
+  },
+  {
+    "name": "Handa",
+    "file": "handa.svg"
+  },
+  {
+    "name": "Herstel na trauma",
+    "file": "herstel-na-trauma-01.svg"
+  },
+  {
+    "name": "Lego",
+    "file": "lego-01-01.svg"
+  },
+  {
+    "name": "Rubik's kubus",
+    "file": "rubiks-kubus.svg"
+  },
+  {
+    "name": "Taartjes",
+    "file": "taartjes-01.svg"
+  },
+  {
+    "name": "Tang",
+    "file": "tang-01.svg"
+  },
+  {
+    "name": "Tot ziens",
+    "file": "tot-ziens.svg"
+  },
+  {
+    "name": "Twee handen",
+    "file": "twee-handen.svg"
+  },
+  {
+    "name": "Twijfeltafel",
+    "file": "twijfeltafel.svg"
+  },
+  {
+    "name": "Vragen",
+    "file": "vragen.svg"
+  },
+  {
+    "name": "Vuist",
+    "file": "vuist-01.svg"
+  },
+  {
+    "name": "Wandelaar",
+    "file": "wandelaar-01.svg"
+  },
+  {
+    "name": "Weegschaal",
+    "file": "weegschaal-01.svg"
+  },
+  {
+    "name": "Welkom",
+    "file": "welkom-01.svg"
+  }
+]

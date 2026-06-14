@@ -325,6 +325,18 @@
   .modal-box h2{font-family:var(--font-pixel);font-weight:400;font-size:18px;color:var(--accent);margin-bottom:18px;letter-spacing:1px}
   .modal-box p{font-family:var(--font-ui);font-size:16px;color:var(--ink);line-height:1.7}
   .modal-box kbd{background:var(--accent-yellow);border:2px solid var(--border);border-radius:0;padding:1px 8px;font-family:var(--font-ui);font-size:14px;color:var(--ink);box-shadow:1px 1px 0 var(--border)}
+  /* SVG-bibliotheek modal */
+  .modal-box.svglib{max-width:900px;width:94%}
+  .modal-box.svglib::before{content:'▓ BIBLIOTHEEK.svg  □ ×'}
+  .svglib-hint{font-family:var(--font-ui);font-size:14px;color:var(--ink-light);margin:-6px 0 14px}
+  #svglib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;max-height:60vh;overflow:auto;margin-bottom:18px;padding:2px}
+  .svglib-item{border:2px solid var(--border);background:var(--panel);box-shadow:var(--hard-shadow-sm);cursor:pointer;display:flex;flex-direction:column;align-items:stretch;padding:0;transition:transform .1s,background .1s}
+  .svglib-item:hover{transform:translate(-2px,-2px);background:var(--accent-yellow)}
+  .svglib-thumb{height:96px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;border-bottom:2px solid var(--border)}
+  .svglib-thumb img{max-width:88%;max-height:84px;width:auto;height:auto;pointer-events:none}
+  .svglib-name{font-family:var(--font-ui);font-size:12px;color:var(--ink);padding:6px 4px;text-align:center;line-height:1.25}
+  .svglib-empty{grid-column:1/-1;font-family:var(--font-ui);color:var(--ink-light);text-align:center;padding:30px 0}
+  .upload-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px}
   ::-webkit-scrollbar{width:12px;height:12px}
   ::-webkit-scrollbar-track{background:var(--surface);border-left:2px solid var(--border)}
   ::-webkit-scrollbar-thumb{background:var(--accent);border:2px solid var(--border);border-radius:0}
@@ -423,6 +435,11 @@
   body.classic .yt-dialog-box h3{font-size:20px}
   body.classic .modal-box p{font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink-light)}
   body.classic .modal-box kbd{background:var(--surface);border-width:1px;border-radius:3px;padding:1px 7px;box-shadow:none;font-size:11px;color:var(--accent)}
+  body.classic .svglib-hint{font-family:'Outfit',sans-serif;font-size:12px}
+  body.classic .svglib-item{border-width:1px;border-radius:8px;box-shadow:none;overflow:hidden}
+  body.classic .svglib-item:hover{transform:none;background:rgba(184,96,42,.06)}
+  body.classic .svglib-thumb{border-bottom-width:1px}
+  body.classic .svglib-name{font-family:'Outfit',sans-serif}
   body.classic .yt-dialog-box input{border-width:1px;border-radius:6px;box-shadow:none;font-family:'Outfit',sans-serif;font-size:13px;padding:10px 14px}
   body.classic .yt-dialog-box input:focus{box-shadow:none;border-color:var(--accent)}
   body.classic .tb-overlay{border-width:1.5px;border-radius:4px}
@@ -506,6 +523,8 @@
       <button class="t-btn" onclick="exportJSON()">Opslaan</button>
       <button class="t-btn" onclick="importJSON()">Laden</button>
       <span class="t-sep"></span>
+      <button class="t-btn" onclick="openSvgLibrary()" title="Kies one-line-art uit de ingebouwde bibliotheek">◫ Bibliotheek</button>
+      <span class="t-sep"></span>
       <div id="add-content-wrap">
         <button class="t-btn" id="add-content-btn" onclick="toggleAddMenu()">+ Toevoegen ▾</button>
         <div id="add-content-dropdown">
@@ -527,6 +546,10 @@
           <div class="upload-icon">+</div>
           <div class="upload-text"><strong>Sleep een SVG hierheen</strong></div>
           <div class="upload-hint">SVG met één of meerdere paden</div>
+          <div class="upload-actions">
+            <button class="t-btn primary" onclick="openSvgLibrary()">◫ Kies uit bibliotheek</button>
+            <button class="t-btn" onclick="pickSvgFile()">⤓ Eigen SVG…</button>
+          </div>
         </div>
         <div id="path-colors-panel"></div>
         <button id="clear-art-btn" onclick="clearCurrentArt()">✕ Verwijder</button>
@@ -613,7 +636,7 @@
   <div class="modal-box" onclick="event.stopPropagation()">
     <h2>Hoe werkt One Line Color?</h2>
     <p>
-      <strong>1. Upload SVG's</strong> — Sleep of klik om een SVG toe te voegen per dia. Meerdere paden worden herkend.<br><br>
+      <strong>1. Kies of upload een SVG</strong> — Kies een afbeelding uit de ingebouwde <strong>Bibliotheek</strong>, of sleep/kies een eigen SVG per dia. Meerdere paden worden herkend.<br><br>
       <strong>2. Kleuren instellen</strong> — Achtergrondkleur, lijnkleur per pad, ondertitel- en tekstkleuren. Maak paden transparant (onzichtbaar tekenen) via het pad-paneel.<br><br>
       <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekst blokken, afbeeldingen en video's (ook YouTube). Alles vrij positioneerbaar en schaalbaar.<br><br>
       <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Media verschijnt na het tekenen.<br><br>
@@ -625,10 +648,23 @@
   </div>
 </div>
 
+<div class="modal-bg" id="svglib-modal" onclick="this.classList.remove('visible')">
+  <div class="modal-box svglib" onclick="event.stopPropagation()">
+    <h2>Bibliotheek</h2>
+    <p class="svglib-hint">Kies een ingebouwde one-line-art afbeelding voor deze dia. Werkt op elke computer — geen losse bestanden nodig.</p>
+    <div id="svglib-grid"></div>
+    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible');pickSvgFile()">⤓ Eigen SVG…</button>
+    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible')">Sluiten</button>
+  </div>
+</div>
+
 <input type="file" id="svg-file-input" accept=".svg" style="display:none">
 <input type="file" id="json-file-input" accept=".json" style="display:none">
 <input type="file" id="image-file-input" accept=".png,.jpg,.jpeg,.gif,.svg,.webp" style="display:none">
 <input type="file" id="video-file-input" accept=".mp4,.webm" style="display:none">
+
+<!-- Ingebouwde one-line-art bibliotheek (gegenereerd door tools/build-svglibrary.js) -->
+<script src="assets/svglibrary.js"></script>
 
 <script>
 // ============================================================
@@ -2533,10 +2569,38 @@ uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('draggin
 uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragging');const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.svg'))handleSVGFile(f);});
 svgFileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)handleSVGFile(f);e.target.value='';});
 
+function applySVGToSlide(svgText){
+  const r=processSVGUpload(svgText);
+  if(!r)return;
+  const s=slides[currentSlide];
+  s.svgPath=r.sampledPath;s.originalSVG=r.originalSVG;s.pathLength=measurePath(r.sampledPath);
+  s.pathCount=r.pathCount;s.pathColors=r.pathColors;
+  renderPreview();updateSlideList();renderPathColorsPanel();
+}
 function handleSVGFile(file){
   const reader=new FileReader();
-  reader.onload=e=>{const r=processSVGUpload(e.target.result);if(r){slides[currentSlide].svgPath=r.sampledPath;slides[currentSlide].originalSVG=r.originalSVG;slides[currentSlide].pathLength=measurePath(r.sampledPath);slides[currentSlide].pathCount=r.pathCount;slides[currentSlide].pathColors=r.pathColors;renderPreview();updateSlideList();renderPathColorsPanel();}};
+  reader.onload=e=>applySVGToSlide(e.target.result);
   reader.readAsText(file);
+}
+function pickSvgFile(){document.getElementById('svg-file-input').click();}
+
+// ── Ingebouwde SVG-bibliotheek ──
+function openSvgLibrary(){
+  const grid=document.getElementById('svglib-grid');
+  const lib=window.SVG_LIBRARY||[];
+  if(!grid.dataset.loaded){
+    grid.innerHTML = lib.length
+      ? lib.map((it,i)=>`<button class="svglib-item" onclick="chooseLibrarySVG(${i})" title="${escHTML(it.name)}"><span class="svglib-thumb"><img src="assets/svglibrary/${encodeURIComponent(it.file)}" alt="" loading="lazy"></span><span class="svglib-name">${escHTML(it.name)}</span></button>`).join('')
+      : '<div class="svglib-empty">Geen afbeeldingen in de bibliotheek.</div>';
+    grid.dataset.loaded='1';
+  }
+  document.getElementById('svglib-modal').classList.add('visible');
+}
+function chooseLibrarySVG(i){
+  const it=(window.SVG_LIBRARY||[])[i];
+  if(!it)return;
+  applySVGToSlide(it.svg);
+  document.getElementById('svglib-modal').classList.remove('visible');
 }
 function clearCurrentArt(){slides[currentSlide].svgPath='';slides[currentSlide].originalSVG='';slides[currentSlide].pathLength=0;slides[currentSlide].pathCount=0;slides[currentSlide].pathColors=[];renderPreview();updateSlideList();renderPathColorsPanel();}
 
