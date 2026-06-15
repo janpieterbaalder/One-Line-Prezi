@@ -305,6 +305,12 @@
   .yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.85);border-radius:14px;pointer-events:none}
   .yt-thumb .yt-play-btn::after{content:'';position:absolute;top:50%;left:54%;transform:translate(-50%,-50%);border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #fff}
   .yt-thumb:hover .yt-play-btn{background:rgba(255,0,0,1)}
+  .yt-player{width:100%;height:100%}
+  .yt-player iframe{width:100%;height:100%;border:none;display:block}
+  .yt-error{width:100%;height:100%;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:var(--font-ui);font-size:15px;text-align:center;padding:16px;box-sizing:border-box}
+  .yt-error a{color:#ff5252;font-weight:600}
+  .yt-next-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(0,0,0,.45);color:#fff;font-family:var(--font-ui);font-size:20px;z-index:5}
+  .yt-next-overlay span{padding:10px 22px;border:2px solid #fff;border-radius:0;background:rgba(0,0,0,.4)}
 
   /* YouTube dialog */
   .yt-dialog{position:fixed;inset:0;background:rgba(10,4,32,.5);z-index:300;display:flex;align-items:center;justify-content:center}
@@ -632,6 +638,8 @@
   </div>
   <div id="present-counter"></div>
   <div id="present-controls">
+    <button id="present-prev" onclick="pPrev()" title="Vorige (←)">◀</button>
+    <button id="present-next" onclick="pNext()" title="Volgende (→)">▶</button>
     <button id="present-fullscreen" onclick="toggleFullscreen()">Volledig scherm</button>
     <button id="present-exit" onclick="stopPresentation()">Esc — Sluiten</button>
   </div>
@@ -1444,13 +1452,55 @@ function stopPresentMediaBlocks(){
   container.innerHTML='';
 }
 
-// Klik-om-af-te-spelen voor YouTube in de presentatie. Geen autoplay-iframe
-// vooraf (faalt onder file:// in de desktop-app); de klik levert het
-// benodigde gebruikersgebaar en we sturen geen ongeldige origin meer mee.
+// Laadt de YouTube IFrame-API eenmalig (lazy). Geeft een Promise terug die
+// resolvet zodra window.YT.Player beschikbaar is.
+let _ytApiPromise=null;
+function ensureYTApi(){
+  if(window.YT&&window.YT.Player)return Promise.resolve();
+  if(_ytApiPromise)return _ytApiPromise;
+  _ytApiPromise=new Promise(resolve=>{
+    const prev=window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady=()=>{if(typeof prev==='function')prev();resolve();};
+    const tag=document.createElement('script');
+    tag.src='https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return _ytApiPromise;
+}
+
+let _presentPlayer=null;
+// Klik-om-af-te-spelen voor YouTube in de presentatie. De app draait via
+// http://127.0.0.1 (zie main.js), dus we hebben een geldige origin en de
+// IFrame-API werkt: zo herkennen we "video klaar" en tonen we een nette
+// foutmelding i.p.v. de YouTube-foutcode.
 function playPresentYouTube(el,id){
   const wrap=el.parentElement;
   wrap.style.pointerEvents='auto';
-  wrap.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"></iframe>`;
+  wrap.innerHTML='<div class="yt-player"></div>';
+  const mount=wrap.querySelector('.yt-player');
+  ensureYTApi().then(()=>{
+    try{if(_presentPlayer&&_presentPlayer.destroy)_presentPlayer.destroy();}catch(e){}
+    _presentPlayer=new YT.Player(mount,{
+      videoId:id,
+      host:'https://www.youtube-nocookie.com',
+      playerVars:{autoplay:1,rel:0,playsinline:1,modestbranding:1,origin:location.origin},
+      events:{
+        onReady:e=>{try{e.target.playVideo();}catch(_){}},
+        onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)showYtNextOverlay(wrap);},
+        onError:()=>{wrap.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
+      }
+    });
+  });
+}
+// Overlay die over de afgespeelde video verschijnt zodra die klaar is, zodat
+// een klik wél naar de volgende dia gaat (de iframe slokt anders alle kliks op).
+function showYtNextOverlay(wrap){
+  if(wrap.querySelector('.yt-next-overlay'))return;
+  const ov=document.createElement('div');
+  ov.className='yt-next-overlay';
+  ov.innerHTML='<span>Klik voor volgende ▶</span>';
+  ov.onclick=ev=>{ev.stopPropagation();pNext();};
+  wrap.appendChild(ov);
 }
 
 // Color controls: background, line, subtitle
@@ -3564,7 +3614,9 @@ async function exportStandaloneHTML(){
   saveInputs();
   if(!slides.some(s=>s.svgPath||s.originalSVG)){alert('Upload eerst SVG\'s.');return;}
   const hasVideos=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='video'));
-  if(hasVideos){alert('Let op: lokale video\'s worden niet meegenomen in de HTML-export. YouTube-video\'s werken wel.');}
+  const hasYouTube=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube'));
+  if(hasVideos){alert('Let op: lokale video\'s worden niet meegenomen in de HTML-export.');}
+  if(hasYouTube){alert('Let op: in de geëxporteerde HTML opent een YouTube-video in een nieuw tabblad op YouTube (insluiten werkt niet als je het bestand met dubbelklik opent). Wil je dat de video ín de presentatie speelt, presenteer dan vanuit de app zelf.');}
 
   // Show loading
   const btn=document.querySelector('[onclick="exportStandaloneHTML()"]');
@@ -3747,6 +3799,8 @@ body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfi
 <div id="present-media"></div>
 <div id="present-counter"></div>
 <div id="present-controls">
+<button onclick="pPrev()" title="Vorige">◀</button>
+<button onclick="pNext()" title="Volgende">▶</button>
 <button onclick="toggleFullscreen()">Volledig scherm</button>
 </div>
 </div>
@@ -3767,7 +3821,11 @@ function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 function isLightColor(hex){const c=hex.replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return(r*299+g*587+b*114)/1000>128;}
 
 function playYouTube(el,id){
-  el.parentElement.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"><\\/iframe>';
+  // Vanaf file:// (dubbelklik op het bestand) weigert YouTube insluiten ->
+  // open de video dan rechtstreeks op YouTube. Wordt de presentatie via een
+  // webserver (http/https) geopend, dan speelt hij gewoon inline af.
+  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id,'_blank');return;}
+  el.parentElement.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&playsinline=1&origin='+encodeURIComponent(location.origin)+'" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"><\\/iframe>';
 }
 
 function fitPresentCanvas(){
