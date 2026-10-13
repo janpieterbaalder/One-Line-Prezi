@@ -531,7 +531,10 @@
       <span class="t-color-label">Lijn</span>
       <div class="color-palette-wrap"><input type="color" id="line-color-input" value="#1a1a1a" title="Standaard lijnkleur"><button class="color-palette-btn" onclick="toggleColorPalette(this,'line-color-input')" title="Opgeslagen kleuren">▾</button><div class="color-palette-popup" data-target="line-color-input"></div></div>
       <span class="t-sep"></span>
-      <button class="t-btn" onclick="exportJSON()">Opslaan</button>
+      <button class="t-btn" id="undo-btn" onclick="undoHistory()" title="Ongedaan maken (Ctrl+Z)" disabled>↶</button>
+      <button class="t-btn" id="redo-btn" onclick="redoHistory()" title="Opnieuw (Ctrl+Y)" disabled>↷</button>
+      <span class="t-sep"></span>
+      <button class="t-btn" onclick="exportJSON()" title="Opslaan als bestand (Ctrl+S)">Opslaan</button>
       <button class="t-btn" onclick="importJSON()">Laden</button>
       <span class="t-sep"></span>
       <button class="t-btn" onclick="openSvgLibrary()" title="Kies one-line-art uit de ingebouwde bibliotheek">◫ Bibliotheek</button>
@@ -1553,7 +1556,7 @@ document.getElementById('image-file-input').addEventListener('change',async e=>{
       if(!s.mediaBlocks)s.mediaBlocks=[];
       s.mediaBlocks.push({type:'image',src:src,x:200,y:200,width:w,height:h,rotation:0,opacity:1});
       selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-      renderMediaBlocks();showMcControls();
+      renderMediaBlocks();showMcControls();recordHistory();
     };
     img.src=src;
   };
@@ -1606,7 +1609,7 @@ document.getElementById('video-file-input').addEventListener('change',e=>{
     if(!s.mediaBlocks)s.mediaBlocks=[];
     s.mediaBlocks.push({type:'video',src:ev.target.result,x:200,y:200,width:560,height:315,rotation:0,opacity:1,autoplay:true});
     selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-    renderMediaBlocks();showMcControls();
+    renderMediaBlocks();showMcControls();recordHistory();
   };
   reader.readAsDataURL(f);
 });
@@ -3193,7 +3196,7 @@ function applySVGToSlide(svgText){
   const s=slides[currentSlide];
   s.svgPath=r.sampledPath;s.originalSVG=r.originalSVG;s.pathLength=measurePath(r.sampledPath);
   s.pathCount=r.pathCount;s.pathColors=r.pathColors;
-  renderPreview();updateSlideList();renderPathColorsPanel();
+  renderPreview();updateSlideList();renderPathColorsPanel();recordHistory();
 }
 function handleSVGFile(file){
   const reader=new FileReader();
@@ -3616,12 +3619,14 @@ async function exportJSON(){
       const writable=await handle.createWritable();
       await writable.write(json);
       await writable.close();
+      markDocSaved();
       return;
     }catch(e){if(e.name==='AbortError')return;/* user cancelled */}
   }
   // Fallback for browsers without File System Access API
   const blob=new Blob([json],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='one-line-presentatie.json';a.click();
+  markDocSaved();
 }
 function importJSON(){document.getElementById('json-file-input').click();}
 document.getElementById('json-file-input').addEventListener('change',e=>{
@@ -3637,7 +3642,7 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
         if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
         return base;
       })}));
-    currentSlide=0;selectSlide(0);}}catch{alert('Ongeldig bestand.');}};
+    currentSlide=0;selectSlide(0,true);resetHistory(false);}}catch{alert('Ongeldig bestand.');}};
   reader.readAsText(f);e.target.value='';
 });
 function showHelp(){document.getElementById('help-modal').classList.add('visible');}
@@ -3886,9 +3891,257 @@ document.addEventListener('keydown',e=>{
   btn.textContent=origText;btn.disabled=false;
 }
 
+// ============================================================
+// ONGEDAAN MAKEN / OPNIEUW
+// ============================================================
+// Werkt met momentopnames van `slides`. Na elke gebruikersactie (muis loslaten,
+// klikken, typen, een veld wijzigen, een bestand inladen) wordt de toestand
+// vergeleken met de laatste opname; is er iets veranderd, dan komt er een stap
+// bij. Teksten worden gedeeld, niet gekopieerd: een video of afbeelding als
+// data-URL kost per stap dus geen extra geheugen.
+const docHistory={stack:[],idx:-1,savedIdx:0,max:80,restoring:false};
+let historyTimer=null;
+const DOC_TITLE=document.title;
+
+function cloneState(v){
+  if(Array.isArray(v))return v.map(cloneState);
+  if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=cloneState(v[k]);return o;}
+  return v;
+}
+function sameState(a,b){
+  if(Object.is(a,b))return true;
+  if(!a||!b||typeof a!=='object'||typeof b!=='object')return false;
+  if(Array.isArray(a)!==Array.isArray(b))return false;
+  const ka=Object.keys(a),kb=Object.keys(b);
+  if(ka.length!==kb.length)return false;
+  for(const k of ka)if(!sameState(a[k],b[k]))return false;
+  return true;
+}
+function isDocDirty(){return docHistory.idx!==docHistory.savedIdx;}
+
+function recordHistory(){
+  clearTimeout(historyTimer);historyTimer=null;
+  if(docHistory.restoring||presentHost.isActive())return;
+  saveInputs();
+  const top=docHistory.stack[docHistory.idx];
+  if(top&&sameState(top.slides,slides))return;
+  docHistory.stack.length=docHistory.idx+1; // een nieuwe wijziging vervangt de 'opnieuw'-stappen
+  docHistory.stack.push({slides:cloneState(slides),current:currentSlide});
+  if(docHistory.stack.length>docHistory.max){docHistory.stack.shift();docHistory.savedIdx--;}
+  docHistory.idx=docHistory.stack.length-1;
+  onDocChanged();
+}
+function scheduleHistory(delay){
+  clearTimeout(historyTimer);
+  historyTimer=setTimeout(recordHistory,delay||0);
+}
+// Nieuwe beginsituatie (opstarten, presentatie geladen of hersteld)
+function resetHistory(dirty){
+  clearTimeout(historyTimer);historyTimer=null;
+  docHistory.stack=[{slides:cloneState(slides),current:currentSlide}];
+  docHistory.idx=0;docHistory.savedIdx=dirty?-1:0;
+  onDocChanged();
+}
+function markDocSaved(){
+  recordHistory();
+  docHistory.savedIdx=docHistory.idx;
+  onDocChanged();
+}
+function restoreHistory(snap,slideIdx){
+  docHistory.restoring=true;
+  try{
+    slides=cloneState(snap.slides);
+    currentSlide=Math.min(Math.max(0,slideIdx),slides.length-1);
+    selectedTB=null;selectedMB=null;
+    selectSlide(currentSlide,true);
+  }finally{docHistory.restoring=false;}
+  onDocChanged();
+}
+function undoHistory(){
+  if(penToolActive)return;
+  recordHistory(); // eerst een eventuele nog niet vastgelegde wijziging vastleggen
+  if(docHistory.idx<=0)return;
+  const from=docHistory.stack[docHistory.idx];
+  docHistory.idx--;
+  // Toon de dia waarop de ongedaan gemaakte wijziging plaatsvond
+  restoreHistory(docHistory.stack[docHistory.idx],from.current);
+}
+function redoHistory(){
+  if(penToolActive)return;
+  recordHistory();
+  if(docHistory.idx>=docHistory.stack.length-1)return;
+  docHistory.idx++;
+  const to=docHistory.stack[docHistory.idx];
+  restoreHistory(to,to.current);
+}
+function onDocChanged(){
+  const u=document.getElementById('undo-btn'),r=document.getElementById('redo-btn');
+  if(u)u.disabled=docHistory.idx<=0;
+  if(r)r.disabled=docHistory.idx>=docHistory.stack.length-1;
+  document.title=(isDocDirty()?'• ':'')+DOC_TITLE;
+  scheduleAutosave();
+}
+
+// Na elke gebruikersactie de toestand vastleggen (pas nadat de eigen
+// handlers van de app hun werk hebben gedaan, vandaar de vertraging).
+document.addEventListener('mouseup',()=>scheduleHistory(0));
+document.addEventListener('click',()=>scheduleHistory(0));
+document.addEventListener('change',()=>scheduleHistory(0));
+document.addEventListener('drop',()=>scheduleHistory(0));
+document.addEventListener('input',()=>scheduleHistory(400));
+document.addEventListener('keyup',()=>scheduleHistory(400));
+
+function isTextEditing(t){
+  if(!t)return false;
+  if(t.isContentEditable||t.tagName==='TEXTAREA')return true;
+  if(t.tagName==='INPUT')return /^(text|number|search|email|url|tel|password)?$/.test(t.type||'');
+  return false;
+}
+// Sneltoetsen in de editor
+document.addEventListener('keydown',e=>{
+  if(presentHost.isActive())return;
+  const editing=isTextEditing(e.target);
+  if((e.ctrlKey||e.metaKey)&&!e.altKey){
+    const k=e.key.toLowerCase();
+    if(k==='s'){e.preventDefault();exportJSON();return;}
+    if(editing)return; // in tekstvelden werkt de eigen undo van de browser
+    if(k==='z'&&!e.shiftKey){e.preventDefault();undoHistory();}
+    else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redoHistory();}
+    return;
+  }
+  if(editing||penToolActive)return;
+  if((e.key==='Delete'||e.key==='Backspace')&&!document.querySelector('.modal-bg.visible')){
+    if(selectedTB!==null){e.preventDefault();deleteTextBlock(selectedTB);scheduleHistory(0);}
+    else if(selectedMB!==null){e.preventDefault();deleteMediaBlock(selectedMB);scheduleHistory(0);}
+  }
+});
+
+// ============================================================
+// AUTOMATISCH BEWAREN + HERSTEL NA AFSLUITEN OF CRASH
+// ============================================================
+// Bewaart de presentatie kort na elke wijziging lokaal (IndexedDB). Grote
+// teksten (afbeeldingen, video, SVG) staan apart en worden maar één keer
+// geschreven. Zijn er bij het opstarten niet-opgeslagen wijzigingen van een
+// vorige sessie, dan biedt de app aan die te herstellen.
+const AUTOSAVE_BIG=64*1024,AUTOSAVE_TOKEN='\u0000media:';
+const autosaveMediaKeys=new Map(); // grote tekst -> sleutel in de media-store
+let autosaveTimer=null,autosaveReady=false,autosaveChain=Promise.resolve(),_autosaveDb=null;
+
+function autosaveDb(){
+  if(!_autosaveDb){
+    _autosaveDb=new Promise((resolve,reject)=>{
+      const req=indexedDB.open('one-line-prezi',1);
+      req.onupgradeneeded=()=>{const db=req.result;db.createObjectStore('doc');db.createObjectStore('media');};
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    }).catch(e=>{_autosaveDb=null;throw e;});
+  }
+  return _autosaveDb;
+}
+function packForAutosave(v,newMedia,refs){
+  if(typeof v==='string'){
+    if(v.length<AUTOSAVE_BIG)return v;
+    let key=autosaveMediaKeys.get(v);
+    if(!key){key='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);autosaveMediaKeys.set(v,key);newMedia.push([key,v]);}
+    refs.add(key);
+    return AUTOSAVE_TOKEN+key;
+  }
+  if(Array.isArray(v))return v.map(x=>packForAutosave(x,newMedia,refs));
+  if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=packForAutosave(v[k],newMedia,refs);return o;}
+  return v;
+}
+function unpackAutosave(v,media){
+  if(typeof v==='string'&&v.startsWith(AUTOSAVE_TOKEN)){
+    const key=v.slice(AUTOSAVE_TOKEN.length),s=media.get(key);
+    if(s===undefined)throw new Error('ontbrekende media '+key);
+    autosaveMediaKeys.set(s,key);
+    return s;
+  }
+  if(Array.isArray(v))return v.map(x=>unpackAutosave(x,media));
+  if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=unpackAutosave(v[k],media);return o;}
+  return v;
+}
+function scheduleAutosave(){
+  if(!autosaveReady)return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer=setTimeout(flushAutosave,1500);
+}
+function flushAutosave(){
+  clearTimeout(autosaveTimer);autosaveTimer=null;
+  if(!autosaveReady)return autosaveChain;
+  autosaveChain=autosaveChain.then(writeAutosave);
+  return autosaveChain;
+}
+async function writeAutosave(){
+  try{
+    const newMedia=[],refs=new Set();
+    const doc={savedAt:Date.now(),dirty:isDocDirty(),current:currentSlide,slides:packForAutosave(slides,newMedia,refs)};
+    const db=await autosaveDb();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(['doc','media'],'readwrite');
+      const ms=tx.objectStore('media');
+      for(const [k,v] of newMedia)ms.put(v,k);
+      tx.objectStore('doc').put(doc,'current');
+      // Media die niet meer gebruikt worden opruimen
+      const keys=ms.getAllKeys();
+      keys.onsuccess=()=>{for(const k of keys.result)if(!refs.has(k))ms.delete(k);};
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+      tx.onabort=()=>reject(tx.error);
+    });
+    for(const [s,k] of autosaveMediaKeys)if(!refs.has(k))autosaveMediaKeys.delete(s);
+  }catch(e){
+    autosaveMediaKeys.clear(); // volgende keer alles opnieuw schrijven
+    console.warn('Automatisch bewaren mislukt:',e);
+  }
+}
+async function offerAutosaveRestore(){
+  try{
+    const db=await autosaveDb();
+    const rec=await new Promise((resolve,reject)=>{
+      const req=db.transaction('doc').objectStore('doc').get('current');
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    if(rec&&rec.dirty&&Array.isArray(rec.slides)&&rec.slides.length){
+      const when=new Date(rec.savedAt).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'});
+      if(confirm(`Er is een presentatie met niet-opgeslagen wijzigingen gevonden (automatisch bewaard op ${when}).\n\nWil je die herstellen?`)){
+        const media=new Map();
+        await new Promise((resolve,reject)=>{
+          const tx=db.transaction('media');const ms=tx.objectStore('media');
+          const ks=ms.getAllKeys(),vs=ms.getAll();
+          tx.oncomplete=()=>{ks.result.forEach((k,i)=>media.set(k,vs.result[i]));resolve();};
+          tx.onerror=()=>reject(tx.error);
+        });
+        slides=unpackAutosave(rec.slides,media);
+        currentSlide=Math.min(Math.max(0,rec.current|0),slides.length-1);
+        selectedTB=null;selectedMB=null;
+        selectSlide(currentSlide,true);
+        autosaveReady=true;
+        resetHistory(true);
+        return;
+      }
+    }
+  }catch(e){console.warn('Automatisch herstel niet beschikbaar:',e);}
+  autosaveReady=true;
+  if(isDocDirty())scheduleAutosave();
+}
+
+// Waarschuwen bij afsluiten met niet-opgeslagen wijzigingen. (In de desktop-app
+// toont main.js hiervoor een eigen dialoog.) Openstaande autosave meteen schrijven.
+window.addEventListener('beforeunload',e=>{
+  recordHistory();
+  if(autosaveTimer)flushAutosave();
+  if(!isDocDirty())return;
+  e.preventDefault();
+  e.returnValue='';
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&autosaveTimer)flushAutosave();});
+
 // INIT
 updateSlideList();renderPreview();syncSubControls();renderTextBlocks();renderMediaBlocks();renderPathColorsPanel();
 document.getElementById('slide-title-input').value=slides[0].title;
+resetHistory(false);
+offerAutosaveRestore();
 </script>
 </body>
 </html>
