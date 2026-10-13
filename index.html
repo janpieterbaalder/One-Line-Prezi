@@ -3364,6 +3364,36 @@ function artFitTransform(originalSVG){
   return{sc:sc,ox:(1920-vw*sc)/2-vx*sc,oy:(1080-vh*sc)/2-vy*sc};
 }
 
+// Voegt de punten van een element toe aan de dia. Ligt het begin niet op het
+// eind van het vorige element, dan loopt de lijn er met een vloeiende curve
+// naartoe (zelfde Bézier als tussen dia's), met evenveel punten per pixel als
+// het element zelf. Zo tekent de verbinding op tekensnelheid door in plaats
+// van in één frame als rechte streep over de dia te verschijnen.
+function appendWithConnector(allPts,groupPts){
+  if(!groupPts.length)return;
+  const last=allPts[allPts.length-1],first=groupPts[0];
+  if(last&&last.visible!==false&&first.visible!==false){
+    const dist=Math.hypot(first.x-last.x,first.y-last.y);
+    if(dist>3){
+      const n=Math.max(8,Math.min(400,Math.round(dist*pointDensity(groupPts))));
+      const conn=generateConnectionPoints(allPts,groupPts,n);
+      conn.pop(); // laatste punt valt samen met het begin van het element
+      for(const p of conn)allPts.push(p);
+    }
+  }
+  for(const p of groupPts)allPts.push(p);
+}
+// Zichtbare punten per pixel lijnlengte (begrensd), voor een gelijk tekentempo
+function pointDensity(pts){
+  let len=0,n=0;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    if(a.visible===false||b.visible===false)continue;
+    len+=Math.hypot(b.x-a.x,b.y-a.y);n++;
+  }
+  return len>0?Math.max(0.15,Math.min(1,n/len)):0.35;
+}
+
 function sampleAllSlides(){
   pSlidePoints=[];
   slides.forEach((s,i)=>{
@@ -3398,6 +3428,7 @@ function sampleAllSlides(){
     if(s.mediaBlocks){
       s.mediaBlocks.forEach(mb=>{
         if(mb.type!=='svgtext')return;
+        const blockPts=[];
         const result=sampleSVGToPoints(mb.src,2000);
         if(!result.points.length)return;
         const doc2=new DOMParser().parseFromString(mb.src,'image/svg+xml');const svgEl=doc2.querySelector('svg');
@@ -3451,7 +3482,7 @@ function sampleAllSlides(){
           const sampled=sampleBezierPath(leftSampled.pathCopy,leftBudget);
           sampled.reverse();
           sampled.forEach(p=>{
-            allPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:leftSampled.color,visible:true});
+            blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:leftSampled.color,visible:true});
           });
         }
         // Text points — resample visible points to textBudget, keep invisible as gap markers
@@ -3463,14 +3494,14 @@ function sampleAllSlides(){
             // Always include invisible points as gap markers (moveTo triggers)
             let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
             if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
-            allPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:'#1a1a1a',visible:false});
+            blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:'#1a1a1a',visible:false});
           } else {
             // Downsample visible points by textStep
             if(visIdx%textStep===0){
               let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
               if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
               const color=pathColors[p.pathIdx]||'#1a1a1a';
-              allPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
+              blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
             }
             visIdx++;
           }
@@ -3481,15 +3512,16 @@ function sampleAllSlides(){
           let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
           if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
           const color=pathColors[p.pathIdx]||'#1a1a1a';
-          allPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
+          blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
         }
         // Right extension line
         if(rightSampled){
           const sampled=sampleBezierPath(rightSampled.pathCopy,rightBudget);
           sampled.forEach(p=>{
-            allPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:rightSampled.color,visible:true});
+            blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:rightSampled.color,visible:true});
           });
         }
+        appendWithConnector(allPts,blockPts);
       });
     }
     pSlidePoints.push(allPts);
