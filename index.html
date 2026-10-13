@@ -680,6 +680,586 @@
 <script src="assets/svglibrary.js"></script>
 <!-- Ingesloten one-line-font (gegenereerd door tools/build-onelinefont.js) -->
 <script src="assets/onelinefont.js"></script>
+<!-- Presentatie-runtime: gedeeld door app en HTML-export (zie exportStandaloneHTML) -->
+<script id="present-runtime">
+// ============================================================
+// PRESENTATIE-RUNTIME
+// Gedeeld door de app én de HTML-export: exportStandaloneHTML() sluit de
+// broncode van dit script-blok letterlijk in het exportbestand in. Een
+// wijziging hier geldt dus voor allebei.
+// De host levert `slides` (gegevens per dia) en `pSlidePoints` (vooraf
+// gesamplede lijnpunten per dia) en stelt gedrag in via `presentHost`.
+// ============================================================
+const presentHost={
+  drawSpeed:()=>3,      // tekensnelheid 1..10
+  isActive:()=>false,   // reageren toetsen/klikken nu op de presentatie?
+  onEnd:()=>{},         // na de laatste dia
+  onEscape:()=>{}       // Esc-toets
+};
+let pIdx=-1,pAnimating=false,pCancel=null,pCanvas=null,pCtx=null;
+let pSlidePoints=[];
+let pViewport={slideW:1920,slideH:1080,slideStride:1920*1.5,scale:1,padX:0,padY:0};
+let pBgColor='#ffffff';
+let pTargetScrollX=0,pOverlayScrollFrom=0;
+window._drawnPoints=[];
+
+function escHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Determine if a color is light or dark for contrast
+function isLightColor(hex){
+  const c=hex.replace('#','');
+  const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
+  return(r*299+g*587+b*114)/1000>128;
+}
+
+function slideDrawDuration(){return Math.max(2500,22000-(presentHost.drawSpeed()||3)*2000);}
+
+function fitPresentCanvas(){
+  const screenW=window.innerWidth,screenH=window.innerHeight;
+  const ratio=1920/1080;
+  let cssW,cssH;
+  if(screenW/screenH>ratio){cssH=screenH;cssW=screenH*ratio;}
+  else{cssW=screenW;cssH=screenW/ratio;}
+  pCanvas.style.width=cssW+'px';
+  pCanvas.style.height=cssH+'px';
+  pCanvas.style.left=((screenW-cssW)/2)+'px';
+  pCanvas.style.top=((screenH-cssH)/2)+'px';
+  // Reposition text overlays using CSS dimensions
+  positionTextOverlays();
+}
+
+// Plaatst een overlay (titel, ondertitel, tekstblok, media of de verschuiving
+// van een nieuwe dia) volgens de huidige canvasgrootte. De geometrie in
+// 1920x1080-coördinaten staat in el._g, zodat herpositioneren bij resize of
+// volledig scherm kan zonder de elementen opnieuw aan te maken (een video of
+// YouTube-film speelt dan gewoon door).
+function placePresentOverlay(el){
+  const g=el._g;if(!g)return;
+  const cl=parseFloat(pCanvas.style.left)||0;
+  const ct=parseFloat(pCanvas.style.top)||0;
+  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
+  const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
+  const scaleX=cssW/1920,scaleY=cssH/1080;
+  if(g.kind==='title'){
+    el.style.left=(cl+cssW/2)+'px';el.style.top=(ct+cssH*0.03)+'px';
+    el.style.fontSize=Math.max(10,cssH*0.012)+'px';
+  }else if(g.kind==='subtitle'){
+    el.style.left=(cl+cssW/2)+'px';el.style.top=(ct+cssH*0.82)+'px';
+    el.style.fontSize=Math.max(16,g.size*scaleY)+'px';
+  }else if(g.kind==='text'){
+    el.style.left=(cl+g.x*scaleX)+'px';el.style.top=(ct+g.y*scaleY)+'px';
+    el.style.fontSize=Math.max(10,g.size*scaleX)+'px';
+  }else if(g.kind==='media'){
+    el.style.left=(cl+g.x*scaleX)+'px';el.style.top=(ct+g.y*scaleY)+'px';
+    el.style.width=(g.w*scaleX)+'px';el.style.height=(g.h*scaleY)+'px';
+  }else if(g.kind==='shift'){
+    el.style.transform=`translateX(${g.strides*pViewport.slideStride*scaleX}px)`;
+  }
+}
+function repositionPresentOverlays(){
+  document.querySelectorAll('#present-overlays *').forEach(el=>{if(el._g)placePresentOverlay(el);});
+}
+// Na een resize of wissel van volledig scherm: alleen herpositioneren. De
+// punten worden bewust NIET opnieuw opgebouwd: tijdens het tekenen voegt de
+// animatie zelf punten toe, en een rebuild halverwege gaf dubbele lijnen plus
+// een losse rechte lijn terug naar het animatiepunt.
+function relayoutPresentation(){
+  if(!pCanvas)return;
+  fitPresentCanvas();
+  repositionPresentOverlays();
+  if(pIdx>=0&&!pAnimating)renderFrame(pTargetScrollX);
+}
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }else{
+    document.exitFullscreen().catch(()=>{});
+  }
+}
+// Update fullscreen button text and relayout the presentation on change
+document.addEventListener('fullscreenchange',()=>{
+  const btn=document.getElementById('present-fullscreen');
+  if(btn)btn.textContent=document.fullscreenElement?'Venster':'Volledig scherm';
+  if(presentHost.isActive())setTimeout(relayoutPresentation,100);
+});
+window.addEventListener('resize',()=>{if(presentHost.isActive())relayoutPresentation();});
+
+// Direction from last N points (N=3 for tight tangent matching)
+function getExitDirection(pts){
+  if(pts.length<2)return{dx:1,dy:0};
+  const n=Math.min(3,pts.length-1);
+  let dx=0,dy=0;
+  for(let i=pts.length-n;i<pts.length;i++){dx+=pts[i].x-pts[i-1].x;dy+=pts[i].y-pts[i-1].y;}
+  const len=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/len,dy:dy/len};
+}
+function getEntryDirection(pts){
+  if(pts.length<2)return{dx:1,dy:0};
+  const n=Math.min(3,pts.length-1);
+  let dx=0,dy=0;
+  for(let i=0;i<n;i++){dx+=pts[i+1].x-pts[i].x;dy+=pts[i+1].y-pts[i].y;}
+  const len=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/len,dy:dy/len};
+}
+
+function generateConnectionPoints(fromPts,toPts,numPoints,targetSlideIdx){
+  if(!fromPts.length||!toPts.length)return[];
+  const p0=fromPts[fromPts.length-1],p3=toPts[0];
+  const dist=Math.sqrt((p3.x-p0.x)**2+(p3.y-p0.y)**2);
+  const tangentLen=dist*0.4;
+  const exit=getExitDirection(fromPts),entry=getEntryDirection(toPts);
+  const cp1={x:p0.x+exit.dx*tangentLen,y:p0.y+exit.dy*tangentLen};
+  const cp2={x:p3.x-entry.dx*tangentLen,y:p3.y-entry.dy*tangentLen};
+  // Connection color: use last point's color from previous slide
+  const lastFromColor=fromPts[fromPts.length-1].color||'#1a1a1a';
+  const connColor=lastFromColor;
+  const points=[];
+  for(let i=1;i<=numPoints;i++){
+    const t=i/numPoints,t2=t*t,t3=t2*t,mt=1-t,mt2=mt*mt,mt3=mt2*mt;
+    points.push({x:mt3*p0.x+3*mt2*t*cp1.x+3*mt*t2*cp2.x+t3*p3.x,y:mt3*p0.y+3*mt2*t*cp1.y+3*mt*t2*cp2.y+t3*p3.y,color:connColor,visible:true});
+  }
+  return points;
+}
+
+// Add new slide's overlays offset to the right, keeping old content in place
+function addNewSlideOverlays(idx){
+  const tbContainer=document.getElementById('present-textblocks');
+  const mbContainer=document.getElementById('present-media');
+  // Detach old elements into fragments (so showText can clear & recreate)
+  const oldTbFrag=document.createDocumentFragment();
+  while(tbContainer.firstChild)oldTbFrag.appendChild(tbContainer.firstChild);
+  const oldMbFrag=document.createDocumentFragment();
+  while(mbContainer.firstChild)oldMbFrag.appendChild(mbContainer.firstChild);
+  // Render new slide using the SAME functions (identical formatting)
+  showText(idx);
+  // Wrap new elements in offset containers (preserves exact layout, only shifts the container)
+  const newTbWrap=document.createElement('div');
+  newTbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
+  newTbWrap._g={kind:'shift',strides:1};placePresentOverlay(newTbWrap);
+  while(tbContainer.firstChild)newTbWrap.appendChild(tbContainer.firstChild);
+  tbContainer.appendChild(newTbWrap);
+  const newMbWrap=document.createElement('div');
+  newMbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
+  newMbWrap._g={kind:'shift',strides:1};placePresentOverlay(newMbWrap);
+  while(mbContainer.firstChild)newMbWrap.appendChild(mbContainer.firstChild);
+  mbContainer.appendChild(newMbWrap);
+  // Re-add old elements at their original positions
+  tbContainer.appendChild(oldTbFrag);
+  mbContainer.appendChild(oldMbFrag);
+}
+// After transition: clean up and re-render at normal positions
+function finalizeSlideOverlays(idx){
+  pOverlayScrollFrom=pTargetScrollX;
+  document.getElementById('present-overlays').style.transform='';
+  // Hide #present-title and #present-subtitle (now rendered as text blocks)
+  document.getElementById('present-title').classList.remove('visible');
+  document.getElementById('present-subtitle').classList.remove('visible');
+  showText(idx);
+  renderFrame(pTargetScrollX);
+}
+
+function pNext(){
+  if(pAnimating){
+    // Skip animation: complete current slide instantly
+    if(pCancel){pCancel();pCancel=null;}
+    rebuildTo(pIdx);
+    pTargetScrollX=pIdx*pViewport.slideStride;
+    finalizeSlideOverlays(pIdx);
+    pAnimating=false;
+    return;
+  }
+  if(pIdx+1>=slides.length){presentHost.onEnd();return;}
+  pIdx++;
+  pAnimating=true;
+  pTargetScrollX=pIdx*pViewport.slideStride;
+  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
+  // Update background color for this slide
+  pBgColor=slides[pIdx].bgColor||'#ffffff';
+  document.getElementById('presenter').style.background=pBgColor;
+  pCanvas.style.background=pBgColor;
+  // Add new slide's overlays offset to the right (old content stays in place)
+  addNewSlideOverlays(pIdx);
+  if(pIdx===0)animateDrawSlide(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
+  else animateTransitionAndDraw(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
+}
+
+function pPrev(){
+  if(pAnimating){
+    if(pCancel){pCancel();pCancel=null;}
+    pAnimating=false;
+  }
+  if(pIdx<=0)return;pIdx--;
+  pBgColor=slides[pIdx].bgColor||'#ffffff';
+  document.getElementById('presenter').style.background=pBgColor;
+  pCanvas.style.background=pBgColor;
+  rebuildTo(pIdx);
+  pTargetScrollX=pIdx*pViewport.slideStride;
+  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
+  finalizeSlideOverlays(pIdx);
+}
+
+function rebuildTo(idx){
+  window._drawnPoints=[];
+  for(let i=0;i<=idx;i++){
+    const pts=pSlidePoints[i];if(!pts||!pts.length)continue;
+    if(window._drawnPoints.length>0){
+      const prevPts=pSlidePoints[i-1]||[];
+      const conn=generateConnectionPoints(prevPts,pts,80,i);
+      conn.forEach(p=>window._drawnPoints.push(p));
+    }
+    pts.forEach(p=>window._drawnPoints.push({...p}));
+  }
+  renderFrame(idx*pViewport.slideStride);
+}
+
+function positionTextOverlays(){
+  const canvas=pCanvas;
+  if(!canvas)return;
+  const titleEl=document.getElementById('present-title');
+  const subEl=document.getElementById('present-subtitle');
+  const counterEl=document.getElementById('present-counter');
+  const cl=parseFloat(canvas.style.left)||0;
+  const ct=parseFloat(canvas.style.top)||0;
+  const cssW=parseFloat(canvas.style.width)||window.innerWidth;
+  const cssH=parseFloat(canvas.style.height)||window.innerHeight;
+  // Title: centered, near top of canvas
+  titleEl.style.left=(cl+cssW/2)+'px';
+  titleEl.style.top=(ct+cssH*0.03)+'px';
+  titleEl.style.transform='translateX(-50%)';
+  titleEl.style.fontSize=Math.max(10,cssH*0.012)+'px';
+  // Subtitle: centered, in lower portion but well within canvas
+  subEl.style.left=(cl+cssW/2)+'px';
+  subEl.style.top=(ct+cssH*0.82)+'px';
+  subEl.style.transform='translateX(-50%)';
+  subEl.style.bottom='auto';
+  subEl.style.fontSize=Math.max(16,cssH*0.03)+'px';
+  // Counter: bottom-right of canvas
+  counterEl.style.bottom='auto';
+  counterEl.style.top=(ct+cssH*0.95)+'px';
+  counterEl.style.right=(window.innerWidth-(cl+cssW)+cssW*0.02)+'px';
+  // Adjust title and counter color for contrast with background
+  const light=isLightColor(pBgColor||'#ffffff');
+  titleEl.style.color=light?'#ccc':'#666';
+  counterEl.style.color=light?'#ccc':'#666';
+}
+
+function showText(idx){
+  positionTextOverlays();
+  // Title and subtitle are now rendered as text blocks inside showPresentTextBlocks
+  document.getElementById('present-title').classList.remove('visible');
+  document.getElementById('present-subtitle').classList.remove('visible');
+  showPresentTextBlocks(idx);
+  showPresentMediaBlocks(idx);
+}
+
+function showPresentTextBlocks(idx){
+  const container=document.getElementById('present-textblocks');
+  container.innerHTML='';
+  const s=slides[idx];
+  // Render title as a text block (centered, top area)
+  if(s.title){
+    const el=document.createElement('div');
+    el.className='present-textblock';
+    el.textContent=s.title;
+    el._g={kind:'title'};placePresentOverlay(el);
+    el.style.transform='translateX(-50%)';
+    el.style.textAlign='center';
+    el.style.fontFamily="'Outfit',sans-serif";
+    el.style.fontWeight='300';
+    el.style.letterSpacing='2px';
+    el.style.textTransform='uppercase';
+    const light=isLightColor(pBgColor||'#ffffff');
+    el.style.color=light?'#ccc':'#666';
+    el.style.zIndex=101;
+    container.appendChild(el);
+    el.classList.add('visible');
+  }
+  // Render subtitle as a text block (centered, bottom area)
+  if(s.subtitle){
+    const el=document.createElement('div');
+    el.className='present-textblock';
+    el.innerHTML=escHTML(s.subtitle).replace(/\n/g,'<br>');
+    el._g={kind:'subtitle',size:s.subSize||80};placePresentOverlay(el);
+    el.style.transform='translateX(-50%)';
+    el.style.textAlign='center';
+    el.style.fontFamily=`'${s.subFont||'Cormorant Garamond'}', serif`;
+    el.style.fontWeight=s.subBold?'700':'400';
+    el.style.fontStyle=s.subItalic?'italic':'normal';
+    el.style.color=s.subColor||'#1a1a1a';
+    el.style.zIndex=101;
+    container.appendChild(el);
+    el.classList.add('visible');
+  }
+  // Render regular text blocks
+  if(s.textBlocks){
+    s.textBlocks.forEach(tb=>{
+      const el=document.createElement('div');
+      el.className='present-textblock';
+      el.innerHTML=escHTML(tb.text).replace(/\n/g,'<br>');
+      el._g={kind:'text',x:tb.x,y:tb.y,size:tb.size};placePresentOverlay(el);
+      el.style.fontFamily=`'${tb.font}', serif`;
+      el.style.fontWeight=tb.bold?'700':'400';
+      el.style.fontStyle=tb.italic?'italic':'normal';
+      el.style.color=tb.color||'#1a1a1a';
+      el.style.textAlign=tb.align||'left';
+      el.style.zIndex=101+(tb.zOrder||0);
+      if(tb.rotation)el.style.transform=`rotate(${tb.rotation}deg)`;
+      container.appendChild(el);
+      el.classList.add('visible');
+    });
+  }
+}
+
+function showPresentMediaBlocks(idx){
+  const container=document.getElementById('present-media');
+  container.innerHTML='';
+  const s=slides[idx];
+  if(!s.mediaBlocks||!s.mediaBlocks.length)return;
+  s.mediaBlocks.filter(mb=>mb.type!=='svgtext').forEach(mb=>{
+    const el=document.createElement('div');
+    el.className='present-media';
+    el._g={kind:'media',x:mb.x,y:mb.y,w:mb.width,h:mb.height};placePresentOverlay(el);
+    el.style.opacity='0';
+    el.style.zIndex=101+(mb.zOrder||0);
+    if(mb.rotation)el.style.transform=`rotate(${mb.rotation}deg)`;
+    if(mb.type==='image'){
+      el.innerHTML=`<img src="${mb.src}">`;
+    } else if(mb.type==='video'){
+      const autoplay=mb.autoplay!==false;
+      el.innerHTML=`<video src="${mb.src}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
+    } else if(mb.type==='youtube'){
+      el.style.pointerEvents='auto';
+      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}')"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
+    }
+    container.appendChild(el);
+    el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');
+  });
+}
+
+function stopPresentMediaBlocks(){
+  const container=document.getElementById('present-media');
+  // Stop all videos
+  container.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
+  container.innerHTML='';
+}
+
+// Laadt de YouTube IFrame-API eenmalig (lazy). Geeft een Promise terug die
+// resolvet zodra window.YT.Player beschikbaar is.
+let _ytApiPromise=null;
+function ensureYTApi(){
+  if(window.YT&&window.YT.Player)return Promise.resolve();
+  if(_ytApiPromise)return _ytApiPromise;
+  _ytApiPromise=new Promise(resolve=>{
+    const prev=window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady=()=>{if(typeof prev==='function')prev();resolve();};
+    const tag=document.createElement('script');
+    tag.src='https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return _ytApiPromise;
+}
+
+let _presentPlayer=null;
+// Klik-om-af-te-spelen voor YouTube in de presentatie. Via http(s) (de app
+// draait op http://127.0.0.1, zie main.js) werkt de IFrame-API: zo herkennen
+// we "video klaar" en tonen we een nette foutmelding i.p.v. de foutcode.
+function playPresentYouTube(el,id){
+  // Vanaf file:// (geëxporteerd bestand met dubbelklik geopend) weigert YouTube
+  // insluiten: open de video dan rechtstreeks op YouTube.
+  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id,'_blank');return;}
+  const wrap=el.parentElement;
+  wrap.style.pointerEvents='auto';
+  wrap.innerHTML='<div class="yt-player"></div>';
+  const mount=wrap.querySelector('.yt-player');
+  ensureYTApi().then(()=>{
+    try{if(_presentPlayer&&_presentPlayer.destroy)_presentPlayer.destroy();}catch(e){}
+    _presentPlayer=new YT.Player(mount,{
+      videoId:id,
+      host:'https://www.youtube-nocookie.com',
+      playerVars:{autoplay:1,rel:0,playsinline:1,modestbranding:1,origin:location.origin},
+      events:{
+        onReady:e=>{try{e.target.playVideo();}catch(_){}},
+        onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)showYtNextOverlay(wrap);},
+        onError:()=>{wrap.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
+      }
+    });
+  });
+}
+// Overlay die over de afgespeelde video verschijnt zodra die klaar is, zodat
+// een klik wél naar de volgende dia gaat (de iframe slokt anders alle kliks op).
+function showYtNextOverlay(wrap){
+  if(wrap.querySelector('.yt-next-overlay'))return;
+  const ov=document.createElement('div');
+  ov.className='yt-next-overlay';
+  ov.innerHTML='<span>Klik voor volgende ▶</span>';
+  ov.onclick=ev=>{ev.stopPropagation();pNext();};
+  wrap.appendChild(ov);
+}
+
+function renderFrame(scrollX){
+  // Shift overlays to match canvas scroll — anchored to the old slide position
+  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
+  const overlayWrap=document.getElementById('present-overlays');
+  if(overlayWrap){
+    const offsetPx=-(scrollX-pOverlayScrollFrom)*(cssW/1920);
+    overlayWrap.style.transform=`translateX(${offsetPx}px)`;
+  }
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  // Draw background color
+  const bgColor=pBgColor||'#ffffff';
+  if(bgColor!=='#ffffff'){
+    pCtx.fillStyle=bgColor;
+    pCtx.fillRect(0,0,pCanvas.width,pCanvas.height);
+  }
+  const pts=window._drawnPoints;if(pts.length<2)return;
+  pCtx.save();pCtx.lineWidth=6;pCtx.lineCap='round';pCtx.lineJoin='round';
+
+  let currentColor=null;
+  let drawing=false;
+
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    const color=p.color||'#1a1a1a';
+    const visible=p.visible!==false;
+
+    if(i===0){
+      if(visible){
+        pCtx.strokeStyle=color;
+        pCtx.beginPath();
+        pCtx.moveTo(p.x-scrollX,p.y);
+        currentColor=color;
+        drawing=true;
+      }
+      continue;
+    }
+
+    if(!visible){
+      if(drawing){pCtx.stroke();drawing=false;}
+      continue;
+    }
+
+    if(color!==currentColor||!drawing){
+      if(drawing)pCtx.stroke();
+      pCtx.strokeStyle=color;
+      pCtx.beginPath();
+      // moveTo previous visible point or current point
+      const prev=pts[i-1];
+      if(prev.visible!==false){pCtx.moveTo(prev.x-scrollX,prev.y);}
+      else{pCtx.moveTo(p.x-scrollX,p.y);}
+      currentColor=color;
+      drawing=true;
+    }
+
+    pCtx.lineTo(p.x-scrollX,p.y);
+  }
+  if(drawing)pCtx.stroke();
+  pCtx.restore();
+}
+
+function animateTransition(slideIdx,done){
+  const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
+  if(!prevPts?.length||!newPts?.length){
+    const sf=(slideIdx-1)*pViewport.slideStride,st=slideIdx*pViewport.slideStride;let start=null,cancelled=false;pCancel=()=>{cancelled=true};
+    requestAnimationFrame(function f(ts){if(cancelled)return;if(!start)start=ts;const t=Math.min(1,(ts-start)/1500);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;renderFrame(sf+(st-sf)*e);if(t<1)requestAnimationFrame(f);else{pCancel=null;done();}});
+    return;
+  }
+  const connectionPoints=generateConnectionPoints(prevPts,newPts,80,slideIdx);
+  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
+  const duration=1800;let start=null,cancelled=false,connAdded=0;pCancel=()=>{cancelled=true};
+  requestAnimationFrame(function f(ts){
+    if(cancelled)return;if(!start)start=ts;
+    const t=Math.min(1,(ts-start)/duration);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    const scrollX=scrollFrom+(scrollTo-scrollFrom)*e;
+    const targetConn=Math.floor(e*connectionPoints.length);
+    while(connAdded<targetConn){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+    renderFrame(scrollX);
+    if(t<1)requestAnimationFrame(f);
+    else{while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}pCancel=null;done();}
+  });
+}
+
+// Unified transition: camera pan + connection curve + drawing in one seamless animation
+function animateTransitionAndDraw(slideIdx,doneCb){
+  const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
+  // Fallback: if either slide has no points, use sequential approach
+  if(!prevPts?.length||!newPts?.length){
+    animateTransition(slideIdx,()=>{animateDrawSlide(slideIdx,doneCb);});
+    return;
+  }
+  const connectionPoints=generateConnectionPoints(prevPts,newPts,80,slideIdx);
+  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
+  const drawDuration=slideDrawDuration();
+  // Phase timing:
+  // - Connection curve: 0 → connDur (line bridges gap between slides)
+  // - Camera pan: 0 → connDur + cameraSettle (camera keeps decelerating into drawing start)
+  // - Slide drawing: connDur → connDur + drawDuration
+  const connDur=1200;
+  const cameraSettle=400;
+  const cameraDur=connDur+cameraSettle;
+  const totalDur=connDur+drawDuration;
+  let start=null,cancelled=false,connAdded=0,drawIdx=0;
+  pCancel=()=>{cancelled=true};
+  requestAnimationFrame(function f(ts){
+    if(cancelled)return;
+    if(!start)start=ts;
+    const elapsed=ts-start;
+    // Camera: smooth ease-in-out over cameraDur, then locked to final position
+    const camT=Math.min(1,elapsed/cameraDur);
+    const camE=camT<.5?2*camT*camT:1-Math.pow(-2*camT+2,2)/2;
+    const scrollX=scrollFrom+(scrollTo-scrollFrom)*camE;
+    // Connection curve: ease-in-out over connDur
+    const conT=Math.min(1,elapsed/connDur);
+    const conE=conT<.5?2*conT*conT:1-Math.pow(-2*conT+2,2)/2;
+    const targetConn=Math.floor(conE*connectionPoints.length);
+    while(connAdded<targetConn){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+    // Slide drawing: starts at connDur, uses same easing as animateDrawSlide
+    if(elapsed>=connDur){
+      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+      const dElapsed=elapsed-connDur;
+      const dT=Math.min(1,dElapsed/drawDuration);
+      const dE=dT<0.15?dT/0.15*0.25:0.25+(1-0.25)*((dT-0.15)/0.85)**0.7;
+      const targetIdx=Math.floor(dE*(newPts.length-1));
+      while(drawIdx<=targetIdx){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
+    }
+    renderFrame(scrollX);
+    if(elapsed<totalDur){requestAnimationFrame(f);}
+    else{
+      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
+      while(drawIdx<newPts.length){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
+      renderFrame(scrollTo);pCancel=null;doneCb();
+    }
+  });
+}
+
+function animateDrawSlide(slideIdx,done){
+  const pts=pSlidePoints[slideIdx];if(!pts?.length){done();return;}
+  const duration=slideDrawDuration();
+  const scrollX=slideIdx*pViewport.slideStride;
+  let start=null,cancelled=false,lastIdx=0;pCancel=()=>{cancelled=true};
+  requestAnimationFrame(function f(ts){
+    if(cancelled)return;if(!start)start=ts;
+    const t=Math.min(1,(ts-start)/duration);
+    // Easing: quick ramp up, steady middle, gentle end
+    const e = t < 0.15
+      ? t / 0.15 * 0.25
+      : 0.25 + (1 - 0.25) * ((t - 0.15) / 0.85) ** 0.7;
+
+    const targetIdx=Math.floor(e*(pts.length-1));
+    while(lastIdx<=targetIdx){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}
+    renderFrame(scrollX);
+    if(t<1){requestAnimationFrame(f);}
+    else{while(lastIdx<pts.length){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}renderFrame(scrollX);pCancel=null;done();}
+  });
+}
+
+// Controls
+document.addEventListener('keydown',e=>{
+  if(!presentHost.isActive())return;
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
+  if(e.key==='Escape')presentHost.onEscape(e);
+});
+document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
+</script>
 
 <script>
 // ============================================================
@@ -838,8 +1418,6 @@ function renderTextBlocks(){
     wrap.appendChild(el);
   });
 }
-
-function escHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function selectTextBlock(idx){
   selectedTB=idx;selectedMB=null;
@@ -1407,101 +1985,6 @@ document.getElementById('preview-wrap').addEventListener('mousedown',e=>{
     if(selectedMB!==null){selectedMB=null;renderMediaBlocks();hideMcControls();}
   }
 });
-
-// ============================================================
-// PRESENTATION MEDIA
-// ============================================================
-function showPresentMediaBlocks(idx){
-  const container=document.getElementById('present-media');
-  container.innerHTML='';
-  const s=slides[idx];
-  if(!s.mediaBlocks||!s.mediaBlocks.length)return;
-  const cl=parseFloat(pCanvas.style.left)||0;
-  const ct=parseFloat(pCanvas.style.top)||0;
-  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
-  const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const scaleX=cssW/1920,scaleY=cssH/1080;
-  s.mediaBlocks.filter(mb=>mb.type!=='svgtext').forEach(mb=>{
-    const el=document.createElement('div');
-    el.className='present-media';
-    el.style.left=(cl+mb.x*scaleX)+'px';
-    el.style.top=(ct+mb.y*scaleY)+'px';
-    el.style.width=(mb.width*scaleX)+'px';
-    el.style.height=(mb.height*scaleY)+'px';
-    el.style.opacity='0';
-    el.style.zIndex=101+(mb.zOrder||0);
-    if(mb.rotation)el.style.transform=`rotate(${mb.rotation}deg)`;
-    if(mb.type==='image'){
-      el.innerHTML=`<img src="${mb.src}">`;
-    } else if(mb.type==='video'){
-      const autoplay=mb.autoplay!==false;
-      el.innerHTML=`<video src="${mb.src}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
-    } else if(mb.type==='youtube'){
-      el.style.pointerEvents='auto';
-      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}')"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
-    }
-    container.appendChild(el);
-    el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');
-  });
-}
-
-function stopPresentMediaBlocks(){
-  const container=document.getElementById('present-media');
-  // Stop all videos
-  container.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
-  container.innerHTML='';
-}
-
-// Laadt de YouTube IFrame-API eenmalig (lazy). Geeft een Promise terug die
-// resolvet zodra window.YT.Player beschikbaar is.
-let _ytApiPromise=null;
-function ensureYTApi(){
-  if(window.YT&&window.YT.Player)return Promise.resolve();
-  if(_ytApiPromise)return _ytApiPromise;
-  _ytApiPromise=new Promise(resolve=>{
-    const prev=window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady=()=>{if(typeof prev==='function')prev();resolve();};
-    const tag=document.createElement('script');
-    tag.src='https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-  });
-  return _ytApiPromise;
-}
-
-let _presentPlayer=null;
-// Klik-om-af-te-spelen voor YouTube in de presentatie. De app draait via
-// http://127.0.0.1 (zie main.js), dus we hebben een geldige origin en de
-// IFrame-API werkt: zo herkennen we "video klaar" en tonen we een nette
-// foutmelding i.p.v. de YouTube-foutcode.
-function playPresentYouTube(el,id){
-  const wrap=el.parentElement;
-  wrap.style.pointerEvents='auto';
-  wrap.innerHTML='<div class="yt-player"></div>';
-  const mount=wrap.querySelector('.yt-player');
-  ensureYTApi().then(()=>{
-    try{if(_presentPlayer&&_presentPlayer.destroy)_presentPlayer.destroy();}catch(e){}
-    _presentPlayer=new YT.Player(mount,{
-      videoId:id,
-      host:'https://www.youtube-nocookie.com',
-      playerVars:{autoplay:1,rel:0,playsinline:1,modestbranding:1,origin:location.origin},
-      events:{
-        onReady:e=>{try{e.target.playVideo();}catch(_){}},
-        onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)showYtNextOverlay(wrap);},
-        onError:()=>{wrap.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
-      }
-    });
-  });
-}
-// Overlay die over de afgespeelde video verschijnt zodra die klaar is, zodat
-// een klik wél naar de volgende dia gaat (de iframe slokt anders alle kliks op).
-function showYtNextOverlay(wrap){
-  if(wrap.querySelector('.yt-next-overlay'))return;
-  const ov=document.createElement('div');
-  ov.className='yt-next-overlay';
-  ov.innerHTML='<span>Klik voor volgende ▶</span>';
-  ov.onclick=ev=>{ev.stopPropagation();pNext();};
-  wrap.appendChild(ov);
-}
 
 // Color controls: background, line, subtitle
 document.getElementById('bg-color-input').addEventListener('input',e=>{
@@ -2830,22 +3313,12 @@ function measurePath(d){
 // ============================================================
 // PRESENTATION
 // ============================================================
-let pIdx=0,pAnimating=false,pCancel=null,pCanvas,pCtx;
-let pSlidePoints=[];let pViewport={};let pBgColor='#ffffff';
-
-function fitPresentCanvas(){
-  const screenW=window.innerWidth,screenH=window.innerHeight;
-  const ratio=1920/1080;
-  let cssW,cssH;
-  if(screenW/screenH>ratio){cssH=screenH;cssW=screenH*ratio;}
-  else{cssW=screenW;cssH=screenW/ratio;}
-  pCanvas.style.width=cssW+'px';
-  pCanvas.style.height=cssH+'px';
-  pCanvas.style.left=((screenW-cssW)/2)+'px';
-  pCanvas.style.top=((screenH-cssH)/2)+'px';
-  // Reposition text overlays using CSS dimensions
-  positionTextOverlays();
-}
+// De presentatie zelf (tekenen, navigeren, overlays) staat in de gedeelde
+// runtime (script-blok met id "present-runtime"). Hier alleen de koppeling met de editor.
+presentHost.drawSpeed=()=>parseInt(document.getElementById('speed-range').value)||3;
+presentHost.isActive=()=>document.getElementById('presenter').style.display==='block';
+presentHost.onEnd=()=>stopPresentation();
+presentHost.onEscape=()=>stopPresentation();
 
 function startPresentation(){
   saveInputs();
@@ -2936,10 +3409,10 @@ function sampleAllSlides(){
         const cx=mb.x+mb.width/2,cy=mb.y+mb.height/2;
         const rad=(mb.rotation||0)*Math.PI/180;
         const cosR=Math.cos(rad),sinR=Math.sin(rad);
-        // Build color lookup from letterColors via path strokes
-        const pathColors=result.pathStrokes.map((stroke,pi)=>{
-          return(mb.letterColors&&mb.letterColors[pi])||(stroke&&stroke!=='none'?stroke:(s.lineColor||'#1a1a1a'));
-        });
+        // Kleur per pad = de stroke die composeOneLineText per letter zette.
+        // (letterColors is per letter genummerd, niet per pad: i, j en
+        // leestekens bestaan uit meerdere paden.)
+        const pathColors=result.pathStrokes.map(stroke=>(stroke&&stroke!=='none')?stroke:(s.lineColor||'#1a1a1a'));
         // Measure arc length of VISIBLE text points only (for proportional budget)
         const visTextPts=result.points.filter(p=>!p.invisible);
         const TOTAL_BUDGET=2000;
@@ -3032,458 +3505,6 @@ function stopPresentation(){
   stopPresentMediaBlocks();
   fitPreview();renderPreview();renderTextBlocks();renderMediaBlocks();
 }
-
-function toggleFullscreen(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().catch(()=>{});
-  }else{
-    document.exitFullscreen().catch(()=>{});
-  }
-}
-// Update fullscreen button text and rescale presentation on change
-document.addEventListener('fullscreenchange',()=>{
-  const btn=document.getElementById('present-fullscreen');
-  if(btn)btn.textContent=document.fullscreenElement?'Venster':'Volledig scherm';
-  // Rescale canvas and text when fullscreen changes during presentation
-  if(document.getElementById('presenter').style.display==='block'){
-    setTimeout(()=>{
-      fitPresentCanvas();
-      rebuildTo(pIdx);
-      pTargetScrollX=pIdx*pViewport.slideStride;
-      finalizeSlideOverlays(pIdx);
-    },100);
-  }
-});
-
-// Direction from last N points (N=3 for tight tangent matching)
-function getExitDirection(pts){
-  if(pts.length<2)return{dx:1,dy:0};
-  const n=Math.min(3,pts.length-1);
-  let dx=0,dy=0;
-  for(let i=pts.length-n;i<pts.length;i++){dx+=pts[i].x-pts[i-1].x;dy+=pts[i].y-pts[i-1].y;}
-  const len=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/len,dy:dy/len};
-}
-function getEntryDirection(pts){
-  if(pts.length<2)return{dx:1,dy:0};
-  const n=Math.min(3,pts.length-1);
-  let dx=0,dy=0;
-  for(let i=0;i<n;i++){dx+=pts[i+1].x-pts[i].x;dy+=pts[i+1].y-pts[i].y;}
-  const len=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/len,dy:dy/len};
-}
-
-function generateConnectionPoints(fromPts,toPts,numPoints,targetSlideIdx){
-  if(!fromPts.length||!toPts.length)return[];
-  const p0=fromPts[fromPts.length-1],p3=toPts[0];
-  const dist=Math.sqrt((p3.x-p0.x)**2+(p3.y-p0.y)**2);
-  const tangentLen=dist*0.4;
-  const exit=getExitDirection(fromPts),entry=getEntryDirection(toPts);
-  const cp1={x:p0.x+exit.dx*tangentLen,y:p0.y+exit.dy*tangentLen};
-  const cp2={x:p3.x-entry.dx*tangentLen,y:p3.y-entry.dy*tangentLen};
-  // Connection color: use last point's color from previous slide
-  const lastFromColor=fromPts[fromPts.length-1].color||'#1a1a1a';
-  const connColor=lastFromColor;
-  const points=[];
-  for(let i=1;i<=numPoints;i++){
-    const t=i/numPoints,t2=t*t,t3=t2*t,mt=1-t,mt2=mt*mt,mt3=mt2*mt;
-    points.push({x:mt3*p0.x+3*mt2*t*cp1.x+3*mt*t2*cp2.x+t3*p3.x,y:mt3*p0.y+3*mt2*t*cp1.y+3*mt*t2*cp2.y+t3*p3.y,color:connColor,visible:true});
-  }
-  return points;
-}
-
-
-// Add new slide's overlays offset to the right, keeping old content in place
-function addNewSlideOverlays(idx){
-  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
-  const slideOffsetPx=pViewport.slideStride*(cssW/1920);
-  const tbContainer=document.getElementById('present-textblocks');
-  const mbContainer=document.getElementById('present-media');
-  // Detach old elements into fragments (so showText can clear & recreate)
-  const oldTbFrag=document.createDocumentFragment();
-  while(tbContainer.firstChild)oldTbFrag.appendChild(tbContainer.firstChild);
-  const oldMbFrag=document.createDocumentFragment();
-  while(mbContainer.firstChild)oldMbFrag.appendChild(mbContainer.firstChild);
-  // Render new slide using the SAME functions (identical formatting)
-  showText(idx);
-  // Wrap new elements in offset containers (preserves exact layout, only shifts the container)
-  const newTbWrap=document.createElement('div');
-  newTbWrap.style.cssText=`position:absolute;inset:0;transform:translateX(${slideOffsetPx}px);pointer-events:none`;
-  while(tbContainer.firstChild)newTbWrap.appendChild(tbContainer.firstChild);
-  tbContainer.appendChild(newTbWrap);
-  const newMbWrap=document.createElement('div');
-  newMbWrap.style.cssText=`position:absolute;inset:0;transform:translateX(${slideOffsetPx}px);pointer-events:none`;
-  while(mbContainer.firstChild)newMbWrap.appendChild(mbContainer.firstChild);
-  mbContainer.appendChild(newMbWrap);
-  // Re-add old elements at their original positions
-  tbContainer.appendChild(oldTbFrag);
-  mbContainer.appendChild(oldMbFrag);
-}
-// After transition: clean up and re-render at normal positions
-function finalizeSlideOverlays(idx){
-  pOverlayScrollFrom=pTargetScrollX;
-  document.getElementById('present-overlays').style.transform='';
-  // Hide #present-title and #present-subtitle (now rendered as text blocks)
-  document.getElementById('present-title').classList.remove('visible');
-  document.getElementById('present-subtitle').classList.remove('visible');
-  showText(idx);
-  renderFrame(pTargetScrollX);
-}
-
-function pNext(){
-  if(pAnimating){
-    // Skip animation: complete current slide instantly
-    if(pCancel){pCancel();pCancel=null;}
-    rebuildTo(pIdx);
-    pTargetScrollX=pIdx*pViewport.slideStride;
-    finalizeSlideOverlays(pIdx);
-    pAnimating=false;
-    return;
-  }
-  pIdx++;if(pIdx>=slides.length){stopPresentation();return;}
-  pAnimating=true;
-  pTargetScrollX=pIdx*pViewport.slideStride;
-  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
-  // Update background color for this slide
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;
-  pCanvas.style.background=pBgColor;
-  // Add new slide's overlays offset to the right (old content stays in place)
-  addNewSlideOverlays(pIdx);
-  if(pIdx===0)animateDrawSlide(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
-  else animateTransitionAndDraw(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
-}
-
-function pPrev(){
-  if(pAnimating){
-    if(pCancel){pCancel();pCancel=null;}
-    pAnimating=false;
-  }
-  if(pIdx<=0)return;pIdx--;
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;
-  pCanvas.style.background=pBgColor;
-  rebuildTo(pIdx);
-  pTargetScrollX=pIdx*pViewport.slideStride;
-  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
-  finalizeSlideOverlays(pIdx);
-}
-
-function rebuildTo(idx){
-  window._drawnPoints=[];
-  for(let i=0;i<=idx;i++){
-    const pts=pSlidePoints[i];if(!pts||!pts.length)continue;
-    if(window._drawnPoints.length>0){
-      const prevPts=pSlidePoints[i-1]||[];
-      const conn=generateConnectionPoints(prevPts,pts,80,i);
-      conn.forEach(p=>window._drawnPoints.push(p));
-    }
-    pts.forEach(p=>window._drawnPoints.push({...p}));
-  }
-  renderFrame(idx*pViewport.slideStride);
-}
-
-function positionTextOverlays(){
-  const canvas=pCanvas;
-  if(!canvas)return;
-  const titleEl=document.getElementById('present-title');
-  const subEl=document.getElementById('present-subtitle');
-  const counterEl=document.getElementById('present-counter');
-  const cl=parseFloat(canvas.style.left)||0;
-  const ct=parseFloat(canvas.style.top)||0;
-  const cssW=parseFloat(canvas.style.width)||window.innerWidth;
-  const cssH=parseFloat(canvas.style.height)||window.innerHeight;
-  // Title: centered, near top of canvas
-  titleEl.style.left=(cl+cssW/2)+'px';
-  titleEl.style.top=(ct+cssH*0.03)+'px';
-  titleEl.style.transform='translateX(-50%)';
-  titleEl.style.fontSize=Math.max(10,cssH*0.012)+'px';
-  // Subtitle: centered, in lower portion but well within canvas
-  subEl.style.left=(cl+cssW/2)+'px';
-  subEl.style.top=(ct+cssH*0.82)+'px';
-  subEl.style.transform='translateX(-50%)';
-  subEl.style.bottom='auto';
-  subEl.style.fontSize=Math.max(16,cssH*0.03)+'px';
-  // Counter: bottom-right of canvas
-  counterEl.style.bottom='auto';
-  counterEl.style.top=(ct+cssH*0.95)+'px';
-  counterEl.style.right=(window.innerWidth-(cl+cssW)+cssW*0.02)+'px';
-  // Adjust title and counter color for contrast with background
-  const light=isLightColor(pBgColor||'#ffffff');
-  titleEl.style.color=light?'#ccc':'#666';
-  counterEl.style.color=light?'#ccc':'#666';
-}
-
-function showText(idx){
-  positionTextOverlays();
-  // Title and subtitle are now rendered as text blocks inside showPresentTextBlocks
-  document.getElementById('present-title').classList.remove('visible');
-  document.getElementById('present-subtitle').classList.remove('visible');
-  showPresentTextBlocks(idx);
-  showPresentMediaBlocks(idx);
-}
-
-function showPresentTextBlocks(idx){
-  const container=document.getElementById('present-textblocks');
-  container.innerHTML='';
-  const s=slides[idx];
-  const cl=parseFloat(pCanvas.style.left)||0;
-  const ct=parseFloat(pCanvas.style.top)||0;
-  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
-  const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const scaleX=cssW/1920,scaleY=cssH/1080;
-  // Render title as a text block (centered, top area)
-  if(s.title){
-    const el=document.createElement('div');
-    el.className='present-textblock';
-    el.textContent=s.title;
-    el.style.left=(cl+cssW/2)+'px';
-    el.style.top=(ct+cssH*0.03)+'px';
-    el.style.transform='translateX(-50%)';
-    el.style.textAlign='center';
-    el.style.fontFamily="'Outfit',sans-serif";
-    el.style.fontSize=Math.max(10,cssH*0.012)+'px';
-    el.style.fontWeight='300';
-    el.style.letterSpacing='2px';
-    el.style.textTransform='uppercase';
-    const light=isLightColor(pBgColor||'#ffffff');
-    el.style.color=light?'#ccc':'#666';
-    el.style.zIndex=101;
-    container.appendChild(el);
-    el.classList.add('visible');
-  }
-  // Render subtitle as a text block (centered, bottom area)
-  if(s.subtitle){
-    const el=document.createElement('div');
-    el.className='present-textblock';
-    el.innerHTML=escHTML(s.subtitle).replace(/\n/g,'<br>');
-    el.style.left=(cl+cssW/2)+'px';
-    el.style.top=(ct+cssH*0.82)+'px';
-    el.style.transform='translateX(-50%)';
-    el.style.textAlign='center';
-    el.style.fontFamily=`'${s.subFont||'Cormorant Garamond'}', serif`;
-    el.style.fontSize=Math.max(16,(s.subSize||80)*scaleY)+'px';
-    el.style.fontWeight=s.subBold?'700':'400';
-    el.style.fontStyle=s.subItalic?'italic':'normal';
-    el.style.color=s.subColor||'#1a1a1a';
-    el.style.zIndex=101;
-    container.appendChild(el);
-    el.classList.add('visible');
-  }
-  // Render regular text blocks
-  if(s.textBlocks){
-    s.textBlocks.forEach(tb=>{
-      const el=document.createElement('div');
-      el.className='present-textblock';
-      el.innerHTML=escHTML(tb.text).replace(/\n/g,'<br>');
-      el.style.left=(cl+tb.x*scaleX)+'px';
-      el.style.top=(ct+tb.y*scaleY)+'px';
-      el.style.fontFamily=`'${tb.font}', serif`;
-      el.style.fontSize=Math.max(10,tb.size*scaleX)+'px';
-      el.style.fontWeight=tb.bold?'700':'400';
-      el.style.fontStyle=tb.italic?'italic':'normal';
-      el.style.color=tb.color||'#1a1a1a';
-      el.style.textAlign=tb.align||'left';
-      el.style.zIndex=101+(tb.zOrder||0);
-      if(tb.rotation)el.style.transform=`rotate(${tb.rotation}deg)`;
-      container.appendChild(el);
-      el.classList.add('visible');
-    });
-  }
-}
-
-function applySubtitleStyle(idx){
-  const s=slides[idx];
-  const el=document.getElementById('present-subtitle');
-  el.style.fontFamily=`'${s.subFont||'Cormorant Garamond'}', serif`;
-  // Scale the subtitle font size proportionally to the presentation canvas
-  const cssH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const scale=cssH/1080;
-  el.style.fontSize=Math.max(16, (s.subSize||80) * scale)+'px';
-  el.style.fontWeight=s.subBold?'700':'400';
-  el.style.fontStyle=s.subItalic?'italic':'normal';
-  el.style.color=s.subColor||'#1a1a1a';
-}
-
-// Determine if a color is light or dark for contrast
-function isLightColor(hex){
-  const c=hex.replace('#','');
-  const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
-  return(r*299+g*587+b*114)/1000>128;
-}
-
-let pTargetScrollX=0,pOverlayScrollFrom=0;
-function renderFrame(scrollX){
-  // Shift overlays to match canvas scroll — anchored to the old slide position
-  const cssW=parseFloat(pCanvas.style.width)||window.innerWidth;
-  const overlayWrap=document.getElementById('present-overlays');
-  if(overlayWrap){
-    const offsetPx=-(scrollX-pOverlayScrollFrom)*(cssW/1920);
-    overlayWrap.style.transform=`translateX(${offsetPx}px)`;
-  }
-  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
-  // Draw background color
-  const bgColor=pBgColor||'#ffffff';
-  if(bgColor!=='#ffffff'){
-    pCtx.fillStyle=bgColor;
-    pCtx.fillRect(0,0,pCanvas.width,pCanvas.height);
-  }
-  const pts=window._drawnPoints;if(pts.length<2)return;
-  pCtx.save();pCtx.lineWidth=6;pCtx.lineCap='round';pCtx.lineJoin='round';
-
-  let currentColor=null;
-  let drawing=false;
-
-  for(let i=0;i<pts.length;i++){
-    const p=pts[i];
-    const color=p.color||'#1a1a1a';
-    const visible=p.visible!==false;
-
-    if(i===0){
-      if(visible){
-        pCtx.strokeStyle=color;
-        pCtx.beginPath();
-        pCtx.moveTo(p.x-scrollX,p.y);
-        currentColor=color;
-        drawing=true;
-      }
-      continue;
-    }
-
-    if(!visible){
-      if(drawing){pCtx.stroke();drawing=false;}
-      continue;
-    }
-
-    if(color!==currentColor||!drawing){
-      if(drawing)pCtx.stroke();
-      pCtx.strokeStyle=color;
-      pCtx.beginPath();
-      // moveTo previous visible point or current point
-      const prev=pts[i-1];
-      if(prev.visible!==false){pCtx.moveTo(prev.x-scrollX,prev.y);}
-      else{pCtx.moveTo(p.x-scrollX,p.y);}
-      currentColor=color;
-      drawing=true;
-    }
-
-    pCtx.lineTo(p.x-scrollX,p.y);
-  }
-  if(drawing)pCtx.stroke();
-  pCtx.restore();
-}
-
-function animateTransition(slideIdx,done){
-  const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
-  if(!prevPts?.length||!newPts?.length){
-    const sf=(slideIdx-1)*pViewport.slideStride,st=slideIdx*pViewport.slideStride;let start=null,cancelled=false;pCancel=()=>{cancelled=true};
-    requestAnimationFrame(function f(ts){if(cancelled)return;if(!start)start=ts;const t=Math.min(1,(ts-start)/1500);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;renderFrame(sf+(st-sf)*e);if(t<1)requestAnimationFrame(f);else{pCancel=null;done();}});
-    return;
-  }
-  const connectionPoints=generateConnectionPoints(prevPts,newPts,80,slideIdx);
-  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
-  const duration=1800;let start=null,cancelled=false,connAdded=0;pCancel=()=>{cancelled=true};
-  requestAnimationFrame(function f(ts){
-    if(cancelled)return;if(!start)start=ts;
-    const t=Math.min(1,(ts-start)/duration);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-    const scrollX=scrollFrom+(scrollTo-scrollFrom)*e;
-    const targetConn=Math.floor(e*connectionPoints.length);
-    while(connAdded<targetConn){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
-    renderFrame(scrollX);
-    if(t<1)requestAnimationFrame(f);
-    else{while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}pCancel=null;done();}
-  });
-}
-
-// Unified transition: camera pan + connection curve + drawing in one seamless animation
-function animateTransitionAndDraw(slideIdx,doneCb){
-  const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
-  // Fallback: if either slide has no points, use sequential approach
-  if(!prevPts?.length||!newPts?.length){
-    animateTransition(slideIdx,()=>{animateDrawSlide(slideIdx,doneCb);});
-    return;
-  }
-  const connectionPoints=generateConnectionPoints(prevPts,newPts,80,slideIdx);
-  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
-  const speed=parseInt(document.getElementById('speed-range').value);
-  const drawDuration=Math.max(2500,22000-speed*2000);
-  // Phase timing:
-  // - Connection curve: 0 → connDur (line bridges gap between slides)
-  // - Camera pan: 0 → connDur + cameraSettle (camera keeps decelerating into drawing start)
-  // - Slide drawing: connDur → connDur + drawDuration
-  const connDur=1200;
-  const cameraSettle=400;
-  const cameraDur=connDur+cameraSettle;
-  const totalDur=connDur+drawDuration;
-  let start=null,cancelled=false,connAdded=0,drawIdx=0;
-  pCancel=()=>{cancelled=true};
-  requestAnimationFrame(function f(ts){
-    if(cancelled)return;
-    if(!start)start=ts;
-    const elapsed=ts-start;
-    // Camera: smooth ease-in-out over cameraDur, then locked to final position
-    const camT=Math.min(1,elapsed/cameraDur);
-    const camE=camT<.5?2*camT*camT:1-Math.pow(-2*camT+2,2)/2;
-    const scrollX=scrollFrom+(scrollTo-scrollFrom)*camE;
-    // Connection curve: ease-in-out over connDur
-    const conT=Math.min(1,elapsed/connDur);
-    const conE=conT<.5?2*conT*conT:1-Math.pow(-2*conT+2,2)/2;
-    const targetConn=Math.floor(conE*connectionPoints.length);
-    while(connAdded<targetConn){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
-    // Slide drawing: starts at connDur, uses same easing as animateDrawSlide
-    if(elapsed>=connDur){
-      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
-      const dElapsed=elapsed-connDur;
-      const dT=Math.min(1,dElapsed/drawDuration);
-      const dE=dT<0.15?dT/0.15*0.25:0.25+(1-0.25)*((dT-0.15)/0.85)**0.7;
-      const targetIdx=Math.floor(dE*(newPts.length-1));
-      while(drawIdx<=targetIdx){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
-    }
-    renderFrame(scrollX);
-    if(elapsed<totalDur){requestAnimationFrame(f);}
-    else{
-      while(connAdded<connectionPoints.length){window._drawnPoints.push(connectionPoints[connAdded]);connAdded++;}
-      while(drawIdx<newPts.length){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
-      renderFrame(scrollTo);pCancel=null;doneCb();
-    }
-  });
-}
-
-function animateDrawSlide(slideIdx,done){
-  const pts=pSlidePoints[slideIdx];if(!pts?.length){done();return;}
-  const speed=parseInt(document.getElementById('speed-range').value);
-  const duration=Math.max(2500,22000-speed*2000);
-  const scrollX=slideIdx*pViewport.slideStride;
-  let start=null,cancelled=false,lastIdx=0;pCancel=()=>{cancelled=true};
-  requestAnimationFrame(function f(ts){
-    if(cancelled)return;if(!start)start=ts;
-    const t=Math.min(1,(ts-start)/duration);
-    // Easing: quick ramp up, steady middle, gentle end
-    const e = t < 0.15
-      ? t / 0.15 * 0.25
-      : 0.25 + (1 - 0.25) * ((t - 0.15) / 0.85) ** 0.7;
-
-    const targetIdx=Math.floor(e*(pts.length-1));
-    while(lastIdx<=targetIdx){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}
-    renderFrame(scrollX);
-    if(t<1){requestAnimationFrame(f);}
-    else{while(lastIdx<pts.length){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}renderFrame(scrollX);pCancel=null;done();}
-  });
-}
-
-// Controls
-document.addEventListener('keydown',e=>{
-  if(document.getElementById('presenter').style.display!=='block')return;
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
-  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
-  if(e.key==='Escape')stopPresentation();
-});
-document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
-window.addEventListener('resize',()=>{
-  if(document.getElementById('presenter').style.display==='block'){
-    fitPresentCanvas();
-    rebuildTo(pIdx);
-    showPresentTextBlocks(pIdx);
-  }
-});
 
 // ============================================================
 // SAVE / LOAD
@@ -3639,105 +3660,14 @@ async function exportStandaloneHTML(){
     // 2. Load fonts as base64
     const fontCSS=await loadFontsAsBase64(usedFonts);
 
-    // 3. Pre-sample all slides
-    const slideStride=1920*1.5;
-    const presampledSlides=[];
-    slides.forEach((s,i)=>{
-      let allPts=[];
-      if(s.originalSVG||s.svgPath){
-        let rawPts;
-        if(s.originalSVG){
-          const result=sampleSVGToPoints(s.originalSVG,3000);
-          rawPts=result.points;
-          if(rawPts.length>1){const first=rawPts[0],last=rawPts[rawPts.length-1];let mnX=Infinity,mxX=-Infinity;for(const p of rawPts){if(p.x<mnX)mnX=p.x;if(p.x>mxX)mxX=p.x;}const w=mxX-mnX;if(w>0&&(first.x-last.x)>w*0.3)rawPts.reverse();}
-        }else{
-          const t=document.createElementNS('http://www.w3.org/2000/svg','svg');
-          t.setAttribute('viewBox','0 0 1920 1080');t.style.cssText='position:absolute;left:-9999px;width:0;height:0';
-          const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',s.svgPath);
-          t.appendChild(p);document.body.appendChild(t);
-          const totalLen=p.getTotalLength();
-          const n=Math.max(500,Math.min(3000,Math.round(totalLen/.3)));
-          rawPts=[];
-          for(let j=0;j<=n;j++){const pt=p.getPointAtLength((j/n)*totalLen);rawPts.push({x:pt.x,y:pt.y,pathIdx:0});}
-          document.body.removeChild(t);
-        }
-        const fit=artFitTransform(s.originalSVG);
-        rawPts.forEach(p=>{
-          const pathInfo=s.pathColors&&s.pathColors[p.pathIdx];
-          const color=pathInfo?pathInfo.color:(s.lineColor||'#1a1a1a');
-          const visible=pathInfo?pathInfo.visible:true;
-          allPts.push({x:(p.x*fit.sc+fit.ox)+i*slideStride,y:(p.y*fit.sc+fit.oy),color:color,visible:visible});
-        });
-      }
-      if(s.mediaBlocks){
-        s.mediaBlocks.forEach(mb=>{
-          if(mb.type!=='svgtext')return;
-          const result=sampleSVGToPoints(mb.src,2000);
-          if(!result.points.length)return;
-          const doc3=new DOMParser().parseFromString(mb.src,'image/svg+xml');const svgEl2=doc3.querySelector('svg');
-          const vb2=(svgEl2?.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
-          const vbX2=vb2[0],vbY2=vb2[1],vbW2=vb2[2],vbH2=vb2[3];
-          const meetScale2=Math.min(mb.width/vbW2,mb.height/vbH2);
-          const sxMB=meetScale2,syMB=meetScale2;
-          const cx=mb.x+mb.width/2,cy=mb.y+mb.height/2;
-          const rad=(mb.rotation||0)*Math.PI/180;
-          const cosR=Math.cos(rad),sinR=Math.sin(rad);
-          const pathColors2=result.pathStrokes.map((stroke,pi)=>{
-            return(mb.letterColors&&mb.letterColors[pi])||(stroke&&stroke!=='none'?stroke:(s.lineColor||'#1a1a1a'));
-          });
-          // Calculate point density from text path for uniform speed
-          const textPtCount2=result.points.length||1;
-          const textArcLen2=(()=>{let len=0;for(let j=1;j<result.points.length;j++){const a=result.points[j-1],b=result.points[j];len+=Math.sqrt((b.x-a.x)**2+(b.y-a.y)**2);}return len||1;})();
-          const density2=textPtCount2/textArcLen2;
-          // Left extension line points — animate from screen edge TO text
-          if(mb.lineLeftPath&&mb.lineLeftPath.length>=2){
-            const epts=getSvgTextScreenEndpoints(mb);
-            const pathCopy=mb.lineLeftPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
-            const dx0=epts.startScreenX-pathCopy[0].x,dy0=epts.baselineScreenY-pathCopy[0].y;
-            pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
-            if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
-            if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
-            const lineColor=mb.lineLeftColor||'#1a1a1a';
-            const rough=sampleBezierPath(pathCopy,100);
-            let arcLen=0;for(let j=1;j<rough.length;j++){arcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
-            const nPts=Math.max(20,Math.round(arcLen*density2*sxMB));
-            const sampled=sampleBezierPath(pathCopy,nPts);
-            sampled.reverse();
-            sampled.forEach(p=>{
-              allPts.push({x:p.x+i*slideStride,y:p.y,color:lineColor,visible:true});
-            });
-          }
-          result.points.forEach(p=>{
-            let px=(p.x-vbX2)*sxMB+mb.x,py=(p.y-vbY2)*syMB+mb.y;
-            if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
-            const color2=pathColors2[p.pathIdx]||'#1a1a1a';
-            const ptVisible=!p.invisible;
-            allPts.push({x:px+i*slideStride,y:py,color:color2,visible:ptVisible});
-          });
-          // Right extension line points
-          if(mb.lineRightPath&&mb.lineRightPath.length>=2){
-            const epts=getSvgTextScreenEndpoints(mb);
-            const pathCopy=mb.lineRightPath.map(p=>({x:p.x,y:p.y,cpIn:p.cpIn?{...p.cpIn}:undefined,cpOut:p.cpOut?{...p.cpOut}:undefined}));
-            const ny0=epts.finishScreenY||epts.baselineScreenY;
-            const dx0=epts.finishScreenX-pathCopy[0].x,dy0=ny0-pathCopy[0].y;
-            pathCopy[0].x+=dx0;pathCopy[0].y+=dy0;
-            if(pathCopy[0].cpIn){pathCopy[0].cpIn.x+=dx0;pathCopy[0].cpIn.y+=dy0;}
-            if(pathCopy[0].cpOut){pathCopy[0].cpOut.x+=dx0;pathCopy[0].cpOut.y+=dy0;}
-            const rightColor=mb.lineRightColor||'#1a1a1a';
-            const rough=sampleBezierPath(pathCopy,100);
-            let arcLen=0;for(let j=1;j<rough.length;j++){arcLen+=Math.sqrt((rough[j].x-rough[j-1].x)**2+(rough[j].y-rough[j-1].y)**2);}
-            const nPts=Math.max(20,Math.round(arcLen*density2*sxMB));
-            const sampled=sampleBezierPath(pathCopy,nPts);
-            sampled.forEach(p=>{
-              allPts.push({x:p.x+i*slideStride,y:p.y,color:rightColor,visible:true});
-            });
-          }
-        });
-      }
-      presampledSlides.push(allPts);
-    });
+    // 3. Punten per dia samplen: dezelfde functie als bij presenteren in de app
+    pViewport={slideW:1920,slideH:1080,slideStride:1920*1.5,scale:1,padX:0,padY:0};
+    sampleAllSlides();
+    const r1=v=>Math.round(v*10)/10;
+    const presampledSlides=pSlidePoints.map(pts=>pts.map(p=>({x:r1(p.x),y:r1(p.y),color:p.color,visible:p.visible!==false})));
 
-    // 4. Prepare slide metadata
+    // 4. Diagegevens voor de runtime. One-line-tekst zit al in de punten;
+    //    lokale video's gaan niet mee (zie melding hierboven).
     const slideMeta=slides.map(s=>({
       title:s.title||'',subtitle:s.subtitle||'',
       subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,
@@ -3748,21 +3678,23 @@ async function exportStandaloneHTML(){
         size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,
         align:tb.align||'left',rotation:tb.rotation||0,color:tb.color||'#1a1a1a',zOrder:tb.zOrder||0
       })),
-      mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='video').map(mb=>{
-        const base={type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,
-          rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0};
-        if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
-        return base;
-      })
+      mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='video'&&mb.type!=='svgtext').map(mb=>({
+        type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,
+        rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0
+      }))
     }));
 
     // 5. Get presentation title
     const presTitle=slides[0].title||'One Line Presentatie';
+    // JSON veilig insluiten: een tekst met een sluitende script-tag zou het bestand anders breken
+    const embedJSON=v=>JSON.stringify(v).replace(/</g,'\\u003c');
+    const runtimeSrc=document.getElementById('present-runtime').textContent.replace(/<\/script/gi,'<\\/script');
+    const speed=parseInt(document.getElementById('speed-range').value)||3;
 
     // 6. Build HTML
     const html=`<!DOCTYPE html>
 <html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${presTitle.replace(/</g,'&lt;')}</title>
+<title>${escHTML(presTitle)}</title>
 <style>
 ${fontCSS}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -3774,338 +3706,74 @@ body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfi
 #presenter:hover #present-controls{opacity:1}
 #present-controls button{background:none;border:1px solid #ddd;border-radius:5px;color:#bbb;padding:6px 14px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;transition:all .2s}
 #present-controls button:hover{border-color:#b8602a;color:#b8602a}
-#present-subtitle{position:absolute;text-align:center;opacity:0;transition:opacity .8s;max-width:70%;z-index:101;pointer-events:none}
+#present-subtitle{position:absolute;text-align:center;opacity:0;max-width:70%;z-index:101;pointer-events:none}
 #present-subtitle.visible{opacity:1}
-#present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none}
+#present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;z-index:101;pointer-events:none}
 #present-title.visible{opacity:1}
-.present-textblock{position:absolute;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none;white-space:pre-wrap;max-width:60%;padding:4px 8px}
+.present-textblock{position:absolute;opacity:0;z-index:101;pointer-events:none;white-space:pre-wrap;max-width:60%;padding:4px 8px}
 .present-textblock.visible{opacity:1}
-.present-media{position:absolute;opacity:0;transition:opacity .8s;z-index:101;pointer-events:none}
+.present-media{position:absolute;opacity:0;z-index:101;pointer-events:none}
 .present-media.visible{opacity:1}
-.present-media img,.present-media iframe{display:block;width:100%;height:100%;border:none;border-radius:0}
+.present-media img,.present-media video,.present-media iframe{display:block;width:100%;height:100%;border:none;border-radius:0}
 .yt-thumb{position:relative;width:100%;height:100%;cursor:pointer;background:#000;overflow:hidden}
-.yt-thumb img{width:100%;height:100%;object-fit:cover}
-.yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.8);border-radius:14px;pointer-events:none}
+.yt-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.85);border-radius:14px;pointer-events:none}
 .yt-thumb .yt-play-btn::after{content:'';position:absolute;top:50%;left:54%;transform:translate(-50%,-50%);border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #fff}
 .yt-thumb:hover .yt-play-btn{background:rgba(255,0,0,1)}
+.yt-player{width:100%;height:100%}
+.yt-player iframe{width:100%;height:100%;border:none;display:block}
+.yt-error{width:100%;height:100%;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:'Outfit',sans-serif;font-size:15px;text-align:center;padding:16px}
+.yt-error a{color:#ff5252;font-weight:600}
+.yt-next-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(0,0,0,.45);color:#fff;font-family:'Outfit',sans-serif;font-size:20px;z-index:5}
+.yt-next-overlay span{padding:10px 22px;border:2px solid #fff;background:rgba(0,0,0,.4)}
 #start-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:pointer;transition:opacity .5s}
 #start-screen h1{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:48px;color:#fff;letter-spacing:4px;margin-bottom:16px}
 #start-screen p{font-size:14px;color:#999;letter-spacing:1px}
 #start-screen.hidden{opacity:0;pointer-events:none}
 </style></head><body>
 <div id="start-screen" onclick="beginPresentation()">
-<h1>${presTitle.replace(/</g,'&lt;')}</h1>
+<h1>${escHTML(presTitle)}</h1>
 <p>Klik of druk op een toets om te starten</p>
 </div>
 <div id="presenter">
 <canvas id="present-canvas"></canvas>
+<div id="present-overlays" style="position:absolute;inset:0;pointer-events:none">
 <div id="present-title"></div>
 <div id="present-subtitle"></div>
 <div id="present-textblocks"></div>
 <div id="present-media"></div>
+</div>
 <div id="present-counter"></div>
 <div id="present-controls">
-<button onclick="pPrev()" title="Vorige">◀</button>
-<button onclick="pNext()" title="Volgende">▶</button>
-<button onclick="toggleFullscreen()">Volledig scherm</button>
+<button id="present-prev" onclick="pPrev()" title="Vorige (←)">◀</button>
+<button id="present-next" onclick="pNext()" title="Volgende (→)">▶</button>
+<button id="present-fullscreen" onclick="toggleFullscreen()">Volledig scherm</button>
 </div>
 </div>
 <script>
-// Embedded presentation data
-const slides=${JSON.stringify(slideMeta)};
-const pSlidePoints=${JSON.stringify(presampledSlides)};
-const slideStride=${slideStride};
-const slideCount=slides.length;
-const drawSpeed=${parseInt(document.getElementById('speed-range').value)||3};
-
-let pIdx=-1,pAnimating=false,pCancel=null,pBgColor='#ffffff';
-const pCanvas=document.getElementById('present-canvas');
-const pCtx=pCanvas.getContext('2d');
-window._drawnPoints=[];
-
-function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function isLightColor(hex){const c=hex.replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return(r*299+g*587+b*114)/1000>128;}
-
-function playYouTube(el,id){
-  // Vanaf file:// (dubbelklik op het bestand) weigert YouTube insluiten ->
-  // open de video dan rechtstreeks op YouTube. Wordt de presentatie via een
-  // webserver (http/https) geopend, dan speelt hij gewoon inline af.
-  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id,'_blank');return;}
-  el.parentElement.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&playsinline=1&origin='+encodeURIComponent(location.origin)+'" allow="autoplay; encrypted-media; fullscreen" allowfullscreen style="pointer-events:auto;width:100%;height:100%;border:none"><\\/iframe>';
-}
-
-function fitPresentCanvas(){
-  const sW=window.innerWidth,sH=window.innerHeight,ratio=1920/1080;
-  let cW,cH;
-  if(sW/sH>ratio){cH=sH;cW=sH*ratio;}else{cW=sW;cH=sW/ratio;}
-  pCanvas.style.width=cW+'px';pCanvas.style.height=cH+'px';
-  pCanvas.style.left=((sW-cW)/2)+'px';pCanvas.style.top=((sH-cH)/2)+'px';
-  positionTextOverlays();
-}
-
-function positionTextOverlays(){
-  const cl=parseFloat(pCanvas.style.left)||0,ct=parseFloat(pCanvas.style.top)||0;
-  const cW=parseFloat(pCanvas.style.width)||window.innerWidth;
-  const cH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const titleEl=document.getElementById('present-title');
-  const subEl=document.getElementById('present-subtitle');
-  const counterEl=document.getElementById('present-counter');
-  titleEl.style.left=(cl+cW/2)+'px';titleEl.style.top=(ct+cH*0.03)+'px';
-  titleEl.style.transform='translateX(-50%)';titleEl.style.fontSize=Math.max(10,cH*0.012)+'px';
-  subEl.style.left=(cl+cW/2)+'px';subEl.style.top=(ct+cH*0.82)+'px';
-  subEl.style.transform='translateX(-50%)';subEl.style.bottom='auto';
-  subEl.style.fontSize=Math.max(16,cH*0.03)+'px';
-  counterEl.style.bottom='auto';counterEl.style.top=(ct+cH*0.95)+'px';
-  counterEl.style.right=(window.innerWidth-(cl+cW)+cW*0.02)+'px';
-  const light=isLightColor(pBgColor||'#ffffff');
-  titleEl.style.color=light?'#ccc':'#666';counterEl.style.color=light?'#ccc':'#666';
-}
-
-function renderFrame(scrollX){
-  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
-  const bg=pBgColor||'#ffffff';
-  pCtx.fillStyle=bg;pCtx.fillRect(0,0,pCanvas.width,pCanvas.height);
-  const pts=window._drawnPoints;if(pts.length<2)return;
-  pCtx.save();pCtx.lineWidth=6;pCtx.lineCap='round';pCtx.lineJoin='round';
-  let curCol=null,drawing=false;
-  for(let i=0;i<pts.length;i++){
-    const p=pts[i],color=p.color||'#1a1a1a',visible=p.visible!==false;
-    if(i===0){if(visible){pCtx.strokeStyle=color;pCtx.beginPath();pCtx.moveTo(p.x-scrollX,p.y);curCol=color;drawing=true;}continue;}
-    if(!visible){if(drawing){pCtx.stroke();drawing=false;}continue;}
-    if(color!==curCol||!drawing){if(drawing)pCtx.stroke();pCtx.strokeStyle=color;pCtx.beginPath();const prev=pts[i-1];if(prev.visible!==false)pCtx.moveTo(prev.x-scrollX,prev.y);else pCtx.moveTo(p.x-scrollX,p.y);curCol=color;drawing=true;}
-    pCtx.lineTo(p.x-scrollX,p.y);
-  }
-  if(drawing)pCtx.stroke();pCtx.restore();
-}
-
-function getExitDir(pts){if(pts.length<2)return{dx:1,dy:0};const n=Math.min(3,pts.length-1);let dx=0,dy=0;for(let i=pts.length-n;i<pts.length;i++){dx+=pts[i].x-pts[i-1].x;dy+=pts[i].y-pts[i-1].y;}const l=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/l,dy:dy/l};}
-function getEntryDir(pts){if(pts.length<2)return{dx:1,dy:0};const n=Math.min(3,pts.length-1);let dx=0,dy=0;for(let i=0;i<n;i++){dx+=pts[i+1].x-pts[i].x;dy+=pts[i+1].y-pts[i].y;}const l=Math.sqrt(dx*dx+dy*dy)||1;return{dx:dx/l,dy:dy/l};}
-
-function genConnPts(fromPts,toPts,num,si){
-  if(!fromPts.length||!toPts.length)return[];
-  const p0=fromPts[fromPts.length-1],p3=toPts[0],dist=Math.sqrt((p3.x-p0.x)**2+(p3.y-p0.y)**2);
-  const tl=dist*0.4,ex=getExitDir(fromPts),en=getEntryDir(toPts);
-  const c1={x:p0.x+ex.dx*tl,y:p0.y+ex.dy*tl},c2={x:p3.x-en.dx*tl,y:p3.y-en.dy*tl};
-  const col=fromPts[fromPts.length-1].color||'#1a1a1a';
-  const pts=[];
-  for(let i=1;i<=num;i++){const t=i/num,t2=t*t,t3=t2*t,mt=1-t,mt2=mt*mt,mt3=mt2*mt;
-    pts.push({x:mt3*p0.x+3*mt2*t*c1.x+3*mt*t2*c2.x+t3*p3.x,y:mt3*p0.y+3*mt2*t*c1.y+3*mt*t2*c2.y+t3*p3.y,color:col,visible:true});}
-  return pts;
-}
-
-function rebuildTo(idx){
-  window._drawnPoints=[];
-  for(let i=0;i<=idx;i++){
-    const pts=pSlidePoints[i];if(!pts||!pts.length)continue;
-    if(window._drawnPoints.length>0){const prev=pSlidePoints[i-1]||[];const conn=genConnPts(prev,pts,80,i);conn.forEach(p=>window._drawnPoints.push(p));}
-    pts.forEach(p=>window._drawnPoints.push({...p}));
-  }
-  renderFrame(idx*slideStride);
-}
-
-function showPresentTextBlocks(idx){
-  const container=document.getElementById('present-textblocks');container.innerHTML='';
-  const s=slides[idx];
-  const cl=parseFloat(pCanvas.style.left)||0,ct=parseFloat(pCanvas.style.top)||0;
-  const cW=parseFloat(pCanvas.style.width)||window.innerWidth,cH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const scX=cW/1920,scY=cH/1080;
-  // Render subtitle as text block
-  if(s.subtitle){
-    const el=document.createElement('div');el.className='present-textblock';
-    el.innerHTML=escHTML(s.subtitle).replace(/\\n/g,'<br>');
-    el.style.left=(cl+cW/2)+'px';el.style.top=(ct+cH*0.82)+'px';
-    el.style.transform='translateX(-50%)';el.style.textAlign='center';
-    el.style.fontFamily="'"+(s.subFont||'Cormorant Garamond')+"', serif";
-    el.style.fontSize=Math.max(16,(s.subSize||80)*scY)+'px';
-    el.style.fontWeight=s.subBold?'700':'400';el.style.fontStyle=s.subItalic?'italic':'normal';
-    el.style.color=s.subColor||'#1a1a1a';el.style.zIndex=101;
-    container.appendChild(el);el.classList.add('visible');
-  }
-  if(s.textBlocks){
-    s.textBlocks.forEach(tb=>{
-      const el=document.createElement('div');el.className='present-textblock';
-      el.innerHTML=escHTML(tb.text).replace(/\\n/g,'<br>');
-      el.style.left=(cl+tb.x*scX)+'px';el.style.top=(ct+tb.y*scY)+'px';
-      el.style.fontFamily="'"+tb.font+"', serif";el.style.fontSize=Math.max(10,tb.size*scX)+'px';
-      el.style.fontWeight=tb.bold?'700':'400';el.style.fontStyle=tb.italic?'italic':'normal';
-      el.style.color=tb.color||'#1a1a1a';el.style.textAlign=tb.align||'left';
-      el.style.zIndex=101+(tb.zOrder||0);
-      if(tb.rotation)el.style.transform='rotate('+tb.rotation+'deg)';
-      container.appendChild(el);el.classList.add('visible');
-    });
-  }
-}
-
-function applySubStyle(idx){
-  const s=slides[idx],el=document.getElementById('present-subtitle');
-  el.style.fontFamily="'"+s.subFont+"', serif";
-  const cH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  el.style.fontSize=Math.max(16,s.subSize*(cH/1080))+'px';
-  el.style.fontWeight=s.subBold?'700':'400';el.style.fontStyle=s.subItalic?'italic':'normal';
-  el.style.color=s.subColor||'#1a1a1a';
-}
-
-function showPresentMediaBlocks(idx){
-  const container=document.getElementById('present-media');container.innerHTML='';
-  const s=slides[idx];if(!s.mediaBlocks||!s.mediaBlocks.length)return;
-  const cl=parseFloat(pCanvas.style.left)||0,ct=parseFloat(pCanvas.style.top)||0;
-  const cW=parseFloat(pCanvas.style.width)||window.innerWidth,cH=parseFloat(pCanvas.style.height)||window.innerHeight;
-  const scX=cW/1920,scY=cH/1080;
-  s.mediaBlocks.filter(mb=>mb.type!=='svgtext').forEach(mb=>{
-    const el=document.createElement('div');el.className='present-media';
-    el.style.left=(cl+mb.x*scX)+'px';el.style.top=(ct+mb.y*scY)+'px';
-    el.style.width=(mb.width*scX)+'px';el.style.height=(mb.height*scY)+'px';
-    el.style.opacity='0';
-    el.style.zIndex=101+(mb.zOrder||0);
-    if(mb.rotation)el.style.transform='rotate('+mb.rotation+'deg)';
-    if(mb.type==='image'){el.innerHTML='<img src="'+mb.src+'">';}
-    else if(mb.type==='youtube'){
-      el.style.pointerEvents='auto';
-      el.innerHTML='<div class="yt-thumb" onclick="event.stopPropagation();playYouTube(this,\\''+mb.src+'\\')"><img src="https://img.youtube.com/vi/'+mb.src+'/hqdefault.jpg" alt="YouTube video"><div class="yt-play-btn"><\\/div><\\/div>';
-    }
-    container.appendChild(el);
-    requestAnimationFrame(()=>{el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');});
-  });
-}
-function stopPresentMediaBlocks(){document.getElementById('present-media').innerHTML='';}
-
-function showText(idx){
-  positionTextOverlays();
-  document.getElementById('present-title').classList.add('visible');
-  document.getElementById('present-subtitle').classList.remove('visible');
-  showPresentTextBlocks(idx);
-  showPresentMediaBlocks(idx);
-}
-
-function animateTransition(si,done){
-  const prevPts=pSlidePoints[si-1],newPts=pSlidePoints[si];
-  if(!prevPts||!prevPts.length||!newPts||!newPts.length){
-    const sf=Math.max(0,(si-1))*slideStride,st=si*slideStride;
-    let start=null,cancelled=false;pCancel=()=>{cancelled=true;};
-    requestAnimationFrame(function f(ts){if(cancelled)return;if(!start)start=ts;const t=Math.min(1,(ts-start)/1500);
-      const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-      renderFrame(sf+(st-sf)*e);
-      if(t<1)requestAnimationFrame(f);else{pCancel=null;done();}
-    });
-    return;
-  }
-  const conn=genConnPts(prevPts,newPts,80,si);
-  const sf=(si-1)*slideStride,st=si*slideStride;
-  const dur=1800;let start=null,cancelled=false,connAdded=0;pCancel=()=>{cancelled=true;};
-  requestAnimationFrame(function f(ts){if(cancelled)return;if(!start)start=ts;const t=Math.min(1,(ts-start)/dur);
-    const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-    const scrollX=sf+(st-sf)*e;
-    const targetConn=Math.floor(e*conn.length);
-    while(connAdded<targetConn){window._drawnPoints.push(conn[connAdded]);connAdded++;}
-    renderFrame(scrollX);
-    if(t<1)requestAnimationFrame(f);
-    else{while(connAdded<conn.length){window._drawnPoints.push(conn[connAdded]);connAdded++;}pCancel=null;done();}
-  });
-}
-
-function animateDrawSlide(si,done){
-  const pts=pSlidePoints[si];if(!pts||!pts.length){
-    renderFrame(si*slideStride);done();return;
-  }
-  const dur=Math.max(2500,22000-drawSpeed*2000),scrollX=si*slideStride;
-  let start=null,cancelled=false,lastIdx=0;pCancel=()=>{cancelled=true;};
-  requestAnimationFrame(function f(ts){if(cancelled)return;
-    if(!start)start=ts;const t=Math.min(1,(ts-start)/dur);
-    const e=t<0.15?t/0.15*0.25:0.25+(1-0.25)*((t-0.15)/0.85)**0.7;
-    const target=Math.floor(e*(pts.length-1));
-    while(lastIdx<=target){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}
-    renderFrame(scrollX);
-    if(t<1)requestAnimationFrame(f);
-    else{while(lastIdx<pts.length){window._drawnPoints.push({...pts[lastIdx]});lastIdx++;}renderFrame(scrollX);pCancel=null;done();}
-  });
-}
-
-function animateTransAndDraw(si,doneCb){
-  const prevPts=pSlidePoints[si-1],newPts=pSlidePoints[si];
-  if(!prevPts||!prevPts.length||!newPts||!newPts.length){
-    animateTransition(si,()=>{animateDrawSlide(si,doneCb);});return;
-  }
-  const conn=genConnPts(prevPts,newPts,80,si);
-  const sf=(si-1)*slideStride,st=si*slideStride;
-  const drawDur=8000,connDur=1200,camSettle=400,camDur=connDur+camSettle,totalDur=connDur+drawDur;
-  let start=null,cancelled=false,connAdded=0,drawIdx=0;pCancel=()=>{cancelled=true;};
-  requestAnimationFrame(function f(ts){if(cancelled)return;
-    if(!start)start=ts;const elapsed=ts-start;
-    const camT=Math.min(1,elapsed/camDur),camE=camT<.5?2*camT*camT:1-Math.pow(-2*camT+2,2)/2;
-    const scrollX=sf+(st-sf)*camE;
-    const conT=Math.min(1,elapsed/connDur),conE=conT<.5?2*conT*conT:1-Math.pow(-2*conT+2,2)/2;
-    const targetConn=Math.floor(conE*conn.length);
-    while(connAdded<targetConn){window._drawnPoints.push(conn[connAdded]);connAdded++;}
-    if(elapsed>=connDur){
-      while(connAdded<conn.length){window._drawnPoints.push(conn[connAdded]);connAdded++;}
-      const dT=Math.min(1,(elapsed-connDur)/drawDur);
-      const dE=dT<0.15?dT/0.15*0.25:0.25+(1-0.25)*((dT-0.15)/0.85)**0.7;
-      const targetIdx=Math.floor(dE*(newPts.length-1));
-      while(drawIdx<=targetIdx){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
-    }
-    renderFrame(scrollX);
-    if(elapsed<totalDur)requestAnimationFrame(f);
-    else{while(connAdded<conn.length){window._drawnPoints.push(conn[connAdded]);connAdded++;}
-      while(drawIdx<newPts.length){window._drawnPoints.push({...newPts[drawIdx]});drawIdx++;}
-      renderFrame(st);pCancel=null;doneCb();}
-  });
-}
-
-function pNext(){
-  if(pAnimating){if(pCancel){pCancel();pCancel=null;}rebuildTo(pIdx);showText(pIdx);pAnimating=false;return;}
-  pIdx++;if(pIdx>=slideCount){pIdx=slideCount-1;return;}
-  pAnimating=true;
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;pCanvas.style.background=pBgColor;
-  document.getElementById('present-counter').textContent=(pIdx+1)+' / '+slideCount;
-  document.getElementById('present-title').textContent=slides[pIdx].title||'';
-  document.getElementById('present-title').classList.remove('visible');
-  document.getElementById('present-subtitle').classList.remove('visible');
-  document.getElementById('present-textblocks').innerHTML='';
-  stopPresentMediaBlocks();
-  if(pIdx===0)animateDrawSlide(pIdx,()=>{showText(pIdx);pAnimating=false;});
-  else animateTransAndDraw(pIdx,()=>{showText(pIdx);pAnimating=false;});
-}
-
-function pPrev(){
-  if(pAnimating){if(pCancel){pCancel();pCancel=null;}pAnimating=false;}
-  if(pIdx<=0)return;pIdx--;
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;pCanvas.style.background=pBgColor;
-  rebuildTo(pIdx);
-  document.getElementById('present-counter').textContent=(pIdx+1)+' / '+slideCount;
-  document.getElementById('present-title').textContent=slides[pIdx].title||'';
-  document.getElementById('present-title').classList.add('visible');
-  const subEl=document.getElementById('present-subtitle');
-  subEl.textContent=slides[pIdx].subtitle||'';applySubStyle(pIdx);
-  if(slides[pIdx].subtitle)subEl.classList.add('visible');else subEl.classList.remove('visible');
-  showPresentTextBlocks(pIdx);
-  stopPresentMediaBlocks();showPresentMediaBlocks(pIdx);
-}
-
-function toggleFullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});else document.exitFullscreen().catch(()=>{});}
-document.addEventListener('fullscreenchange',()=>{fitPresentCanvas();if(pIdx>=0){rebuildTo(pIdx);showPresentTextBlocks(pIdx);stopPresentMediaBlocks();showPresentMediaBlocks(pIdx);}});
-
-document.addEventListener('keydown',e=>{
-  // Zolang het startscherm zichtbaar is, start een toets alleen de presentatie (zie onder)
-  if(!document.getElementById('start-screen').classList.contains('hidden'))return;
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
-  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
-  if(e.key==='Escape'&&document.fullscreenElement){e.preventDefault();document.exitFullscreen().catch(()=>{});}
-});
-document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
-window.addEventListener('resize',()=>{fitPresentCanvas();if(pIdx>=0){rebuildTo(pIdx);showPresentTextBlocks(pIdx);stopPresentMediaBlocks();showPresentMediaBlocks(pIdx);}});
-
+// Ingesloten presentatiegegevens
+const slides=${embedJSON(slideMeta)};
+<\/script>
+<script>
+${runtimeSrc}
+<\/script>
+<script>
+pSlidePoints=${embedJSON(presampledSlides)};
+pCanvas=document.getElementById('present-canvas');pCtx=pCanvas.getContext('2d');
+presentHost.drawSpeed=()=>${speed};
+presentHost.isActive=()=>document.getElementById('start-screen').classList.contains('hidden');
+presentHost.onEscape=()=>{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});};
 function beginPresentation(){
   document.getElementById('start-screen').classList.add('hidden');
   pCanvas.width=1920;pCanvas.height=1080;
   pBgColor=slides[0].bgColor||'#ffffff';
   document.getElementById('presenter').style.background=pBgColor;pCanvas.style.background=pBgColor;
-  fitPresentCanvas();pIdx=-1;pAnimating=false;window._drawnPoints=[];pNext();
+  fitPresentCanvas();pIdx=-1;pAnimating=false;window._drawnPoints=[];pTargetScrollX=0;pOverlayScrollFrom=0;pNext();
 }
+// Op het startscherm start elke toets de presentatie
 document.addEventListener('keydown',e=>{
-  if(!document.getElementById('start-screen').classList.contains('hidden')){beginPresentation();e.preventDefault();}
-},{once:false});
+  if(!presentHost.isActive()){beginPresentation();e.preventDefault();}
+});
 <\/script></body></html>`;
 
     // 7. Save
