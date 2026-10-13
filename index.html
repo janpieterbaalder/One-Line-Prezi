@@ -2374,7 +2374,10 @@ function domSampleSVG(svgText, densityDivisor, minPts, maxPts){
 
 // Sample SVG to points: tries fast JS Bezier math first, falls back to DOM for arcs/quadratics
 // Returns {points: [{x, y, pathIdx}], pathCount: N, pathStrokes: [originalStrokeColors]}
-function sampleSVGToPoints(svgText, totalPts){
+// opts.byLength: punten verdelen naar padlengte i.p.v. gelijk per pad, zodat de
+// pen met een gelijkmatig tempo tekent (gebruikt voor one-line-tekst, waar een
+// lange W en een puntje anders even lang duren).
+function sampleSVGToPoints(svgText, totalPts, opts){
   const parser=new DOMParser();const doc=parser.parseFromString(svgText,'image/svg+xml');const svg=doc.querySelector('svg');
   if(!svg)return{points:[],pathCount:0,pathStrokes:[]};
   const paths=svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect');
@@ -2386,7 +2389,19 @@ function sampleSVGToPoints(svgText, totalPts){
   let visiblePathCount=0;
   paths.forEach(el=>{if(el.getAttribute('data-invisible')!=='true')visiblePathCount++;});
   if(visiblePathCount===0)visiblePathCount=paths.length;
-  paths.forEach(el=>{
+  let lenShare=null;
+  if(opts&&opts.byLength){
+    const lens=[...paths].map(el=>{
+      if(el.tagName!=='path'||el.getAttribute('data-invisible')==='true')return 0;
+      const pts=fastSamplePath(el.getAttribute('d').replace(/[Zz]/g,''),40);
+      if(!pts)return 0;
+      let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+      return len;
+    });
+    const total=lens.reduce((a,b)=>a+b,0);
+    if(total>0)lenShare=lens.map(l=>l/total);
+  }
+  paths.forEach((el,elIdx)=>{
     // Read original stroke color from SVG element
     const stroke=el.getAttribute('stroke')||el.style.stroke||'';
     const invisible=el.getAttribute('data-invisible')==='true';
@@ -2394,7 +2409,7 @@ function sampleSVGToPoints(svgText, totalPts){
     if(el.tagName==='path'){
       const d=el.getAttribute('d').replace(/[Zz]/g,'');
       // Invisible paths: sample minimally (just 2 points for position), don't consume animation budget
-      const ptsPerPath=invisible?2:(Math.round(totalPts/visiblePathCount)||totalPts);
+      const ptsPerPath=invisible?2:lenShare?Math.max(4,Math.round(totalPts*lenShare[elIdx])):(Math.round(totalPts/visiblePathCount)||totalPts);
       const pts=fastSamplePath(d,ptsPerPath);
       if(pts){pts.forEach(p=>{p.pathIdx=pathIdx;if(invisible)p.invisible=true;});allPoints.push(...pts);pathIdx++;return;}
       usedFast=false;
@@ -2445,13 +2460,13 @@ async function loadOneLineFont(){
       entries=[];
       for(const fn of files){const r=await fetch('assets/onelinefont/'+encodeURIComponent(fn));entries.push({file:fn,svg:await r.text()});}
     }
-    // Bestandsnaam: "kleine a", "hoofdletter A" of "cijfer 1" + metadata
-    const metaRe=/(?:kleine|hoofdletter|cijfer)\s+(\S+)\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
+    // Bestandsnaam: "kleine a", "hoofdletter A", "cijfer 1" of "leesteken punt" + metadata
+    const metaRe=/(kleine|hoofdletter|cijfer|leesteken)\s+(\S+)\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
     const spaceRe=/spatie\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
     for(const ent of entries){
       const fn=ent.file;
       let letter,m=fn.match(metaRe),isSpace=false;
-      if(m){letter=m[1];}
+      if(m){letter=m[1]==='leesteken'?ONE_LINE_PUNCTUATION[m[2]]:m[2];m=m.slice(1);if(!letter)continue;}
       else{m=fn.match(spaceRe);if(m){letter=' ';isSpace=true;m=[null,...m];}else continue;}
       const parseXY=s=>{const[x,y]=s.split(',').map(Number);return{x,y};};
       const lo=parseXY(m[2]),ro=parseXY(m[3]),s=parseXY(m[4]),f=parseXY(m[5]);
@@ -2463,9 +2478,13 @@ async function loadOneLineFont(){
       const vb=(svgEl?.getAttribute('viewBox')||'0 0 200 200').split(/\s+/).map(Number);
       // Letters i and j: multiple paths, even paths (1-indexed: 2,4) are invisible connectors
       const isDotLetter=(letter==='i'||letter==='j');
+      // Overige tekens: een pad zonder lijn (stroke none of geen stroke) is een
+      // onzichtbare verbinding, waar de pen even omhoog gaat (bijv. naar de punt
+      // van een ! of ?).
+      const hasStroke=svgPathHasStroke(doc);
       const paths=[];
       allPaths.forEach((p,pi)=>{
-        const visible=isSpace?false:(isDotLetter?(pi%2===0):true);
+        const visible=isSpace?false:(isDotLetter?(pi%2===0):hasStroke(p));
         paths.push({d:p.getAttribute('d'),visible:visible});
       });
       // Dot letters: reverse path order so animation follows: entry→up→dot→down→body
@@ -2485,11 +2504,42 @@ async function loadOneLineFont(){
     }
   }catch(e){console.warn('One Line Font laden mislukt:',e);}
 }
+// Leestekens staan met een naam in de bestandsnaam: Windows staat : ? / " niet toe.
+const ONE_LINE_PUNCTUATION={punt:'.',komma:',',uitroepteken:'!',vraagteken:'?',streepje:'-',
+  dubbelepunt:':',puntkomma:';',apostrof:"'",aanhalingsteken:'"','haakje-openen':'(',
+  'haakje-sluiten':')','en-teken':'&','schuine-streep':'/',plus:'+',is:'='};
+// Typografische varianten (bijv. uit Word geplakt) → het teken uit het font
+const ONE_LINE_ALIASES={'\u2018':"'",'\u2019':"'",'\u201A':"'",'\u2032':"'",'\u201C':'"','\u201D':'"','\u201E':'"',
+  '\u2013':'-','\u2014':'-','\u2212':'-','\u00D7':'x'};
 loadOneLineFont();
 
-// Zoek het glyph voor een teken: exact (hoofdletter/cijfer), anders de kleine
-// letter, anders zonder accent (é → e, Ë → E/e).
+// Geeft per pad terug of het een zichtbare lijn heeft: via het stroke-attribuut,
+// een inline style of de klasse uit het <style>-blok (zoals Illustrator die maakt).
+function svgPathHasStroke(doc){
+  const visibleClasses=new Set();
+  const css=[...doc.querySelectorAll('style')].map(st=>st.textContent).join('\n');
+  for(const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)){
+    const sm=m[2].match(/(?:^|[;\s])stroke\s*:\s*([^;]+)/);
+    if(!sm)continue;
+    const on=sm[1].trim()!=='none';
+    for(const sel of m[1].split(',')){
+      const c=sel.trim().match(/^\.([\w-]+)$/);
+      if(c){if(on)visibleClasses.add(c[1]);else visibleClasses.delete(c[1]);}
+    }
+  }
+  return p=>{
+    const attr=p.getAttribute('stroke');
+    if(attr)return attr!=='none';
+    const st=(p.getAttribute('style')||'').match(/(?:^|[;\s])stroke\s*:\s*([^;]+)/);
+    if(st)return st[1].trim()!=='none';
+    return(p.getAttribute('class')||'').split(/\s+/).some(c=>visibleClasses.has(c));
+  };
+}
+
+// Zoek het glyph voor een teken: exact (hoofdletter/cijfer/leesteken), anders
+// de kleine letter, anders zonder accent (é → e, Ë → E/e).
 function oneLineGlyph(ch){
+  if(ONE_LINE_ALIASES[ch])ch=ONE_LINE_ALIASES[ch];
   if(oneLineFont[ch])return oneLineFont[ch];
   const lower=ch.toLowerCase();
   if(oneLineFont[lower])return oneLineFont[lower];
@@ -2503,7 +2553,8 @@ function oneLineMissingChars(text){
 function oneLineAvailableText(){
   const keys=Object.keys(oneLineFont).filter(k=>k!==' ');
   const pick=re=>keys.filter(k=>re.test(k)).sort().join('');
-  const groups=[pick(/^[a-z]$/),pick(/^[A-Z]$/),pick(/^[0-9]$/)].filter(Boolean);
+  const punct=keys.filter(k=>!/^[a-zA-Z0-9]$/.test(k)).sort().join(' ');
+  const groups=[pick(/^[a-z]$/),pick(/^[A-Z]$/),pick(/^[0-9]$/),punct].filter(Boolean);
   return groups.join('  ·  ')+(oneLineFont[' ']?'  ·  spatie':'');
 }
 
@@ -3024,6 +3075,10 @@ function composeOneLineText(text, letterColors){
     totalW=Math.max(totalW,dx+g.width);
     letterIdx++;
   }
+  // Onzichtbare verbindingen aan begin en eind weglaten (bijv. na een punt of
+  // vóór een haakje), zodat de lijn aansluit op wat ervoor en erna komt.
+  while(paths.length&&paths[0].visible===false)paths.shift();
+  while(paths.length&&paths[paths.length-1].visible===false)paths.pop();
   if(paths.length===0)return null;
   totalW=Math.max(totalW,cursorX);
   const pad=20;
@@ -3429,7 +3484,7 @@ function sampleAllSlides(){
       s.mediaBlocks.forEach(mb=>{
         if(mb.type!=='svgtext')return;
         const blockPts=[];
-        const result=sampleSVGToPoints(mb.src,2000);
+        const result=sampleSVGToPoints(mb.src,2000,{byLength:true});
         if(!result.points.length)return;
         const doc2=new DOMParser().parseFromString(mb.src,'image/svg+xml');const svgEl=doc2.querySelector('svg');
         const vb=(svgEl?.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
