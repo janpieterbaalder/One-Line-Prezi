@@ -653,8 +653,8 @@
       <strong>2. Kleuren instellen</strong> — Achtergrondkleur, lijnkleur per pad, ondertitel- en tekstkleuren. Maak paden transparant (onzichtbaar tekenen) via het pad-paneel.<br><br>
       <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekst blokken, afbeeldingen en video's (ook YouTube). Alles vrij positioneerbaar en schaalbaar.<br><br>
       <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Media verschijnt na het tekenen.<br><br>
-      <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> — Volgende &nbsp;
-      <kbd>←</kbd> — Vorige &nbsp;
+      <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>PgDn</kbd> <kbd>Klik</kbd> — Volgende &nbsp;
+      <kbd>←</kbd> <kbd>PgUp</kbd> — Vorige &nbsp;
       <kbd>Esc</kbd> — Stop
     </p><br>
     <button class="t-btn" onclick="document.getElementById('help-modal').classList.remove('visible')">Sluiten</button>
@@ -1962,7 +1962,8 @@ async function loadOneLineFont(){
       entries=[];
       for(const fn of files){const r=await fetch('assets/onelinefont/'+encodeURIComponent(fn));entries.push({file:fn,svg:await r.text()});}
     }
-    const metaRe=/kleine\s+(\S+)\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
+    // Bestandsnaam: "kleine a", "hoofdletter A" of "cijfer 1" + metadata
+    const metaRe=/(?:kleine|hoofdletter|cijfer)\s+(\S+)\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
     const spaceRe=/spatie\s+\(lo=([^;]+);\s*ro=([^;]+);\s*s=([^;]+);\s*f=([^)]+)\)/;
     for(const ent of entries){
       const fn=ent.file;
@@ -2002,6 +2003,26 @@ async function loadOneLineFont(){
   }catch(e){console.warn('One Line Font laden mislukt:',e);}
 }
 loadOneLineFont();
+
+// Zoek het glyph voor een teken: exact (hoofdletter/cijfer), anders de kleine
+// letter, anders zonder accent (é → e, Ë → E/e).
+function oneLineGlyph(ch){
+  if(oneLineFont[ch])return oneLineFont[ch];
+  const lower=ch.toLowerCase();
+  if(oneLineFont[lower])return oneLineFont[lower];
+  const base=ch.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(base!==ch)return oneLineFont[base]||oneLineFont[base.toLowerCase()]||null;
+  return null;
+}
+function oneLineMissingChars(text){
+  return[...new Set([...text].filter(ch=>ch!==' '&&!oneLineGlyph(ch)))];
+}
+function oneLineAvailableText(){
+  const keys=Object.keys(oneLineFont).filter(k=>k!==' ');
+  const pick=re=>keys.filter(k=>re.test(k)).sort().join('');
+  const groups=[pick(/^[a-z]$/),pick(/^[A-Z]$/),pick(/^[0-9]$/)].filter(Boolean);
+  return groups.join('  ·  ')+(oneLineFont[' ']?'  ·  spatie':'');
+}
 
 function translatePathD(d,dx,dy){
   if(dx===0&&dy===0)return d;
@@ -2047,21 +2068,6 @@ function translatePathD(d,dx,dy){
     first=false;
   }
   return result;
-}
-
-function getTextEndpoints(text){
-  let cursorX=0,isFirst=true;
-  let maxSvgHeight=200;
-  for(const ch of text.toLowerCase()){
-    if(ch===' '){cursorX+=60;continue;}
-    const g=oneLineFont[ch];if(!g)continue;
-    if(g.svgHeight>maxSvgHeight)maxSvgHeight=g.svgHeight;
-    let dx;
-    if(isFirst){dx=-g.startX;cursorX=dx;isFirst=false;}
-    else{dx=cursorX-g.startX;}
-    cursorX=dx+g.finishX;
-  }
-  return{startX:0,finishX:cursorX,baselineY:140,maxSvgHeight:maxSvgHeight};
 }
 
 function rebuildSvgTextSrc(mb){
@@ -2505,12 +2511,12 @@ function startAnchorDrag(e,mbIdx,side,pointIdx,scaleX,scaleY){
 function composeOneLineText(text, letterColors){
   const SPACE_W=60;
   const paths=[];let cursorX=0;let totalW=0;let isFirst=true;
-  const missing=[];let letterIdx=0;
+  let letterIdx=0;
   let maxSvgHeight=200;
-  for(const ch of text.toLowerCase()){
+  for(const ch of text){
     if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;continue;}
-    const g=oneLineFont[ch];
-    if(!g){missing.push(ch);letterIdx++;continue;}
+    const g=oneLineGlyph(ch);
+    if(!g){letterIdx++;continue;}
     if(g.svgHeight>maxSvgHeight)maxSvgHeight=g.svgHeight;
     let dx=0;
     if(isFirst){
@@ -2535,10 +2541,6 @@ function composeOneLineText(text, letterColors){
     totalW=Math.max(totalW,dx+g.width);
     letterIdx++;
   }
-  if(missing.length>0){
-    const unique=[...new Set(missing)];
-    alert('Niet beschikbare letters: '+unique.join(', ')+'\nDeze worden overgeslagen.');
-  }
   if(paths.length===0)return null;
   totalW=Math.max(totalW,cursorX);
   const pad=20;
@@ -2555,7 +2557,7 @@ function composeOneLineText(text, letterColors){
 }
 
 function showOneLineTextDialog(){
-  const available=Object.keys(oneLineFont).filter(k=>k!==' ').sort().join(' ')+(oneLineFont[' ']?' + spatie':'');
+  const available=oneLineAvailableText();
   if(!available){alert('One Line Font nog niet geladen. Probeer het opnieuw.');return;}
   const wrap=document.getElementById('preview-wrap');
   const box=document.createElement('div');
@@ -2575,6 +2577,8 @@ function showOneLineTextDialog(){
   box.querySelector('#olf-confirm-btn').addEventListener('click',()=>{
     const text=field.value.trim();
     if(!text){alert('Voer tekst in.');return;}
+    const missing=oneLineMissingChars(text);
+    if(missing.length)alert('Niet beschikbare tekens: '+missing.join(' ')+'\nDeze worden overgeslagen.');
     const letterColors=[];
     for(let i=0;i<text.length;i++)letterColors.push('#1a1a1a');
     const svgText=composeOneLineText(text,letterColors);
@@ -2597,7 +2601,7 @@ function editSvgText(mbIdx){
   const s=slides[currentSlide];
   const mb=s.mediaBlocks[mbIdx];
   if(!mb||mb.type!=='svgtext')return;
-  const available=Object.keys(oneLineFont).sort().join(' ');
+  const available=oneLineAvailableText();
   const wrap=document.getElementById('preview-wrap');
   const box=document.createElement('div');
   box.id='olf-inline-input';
@@ -2616,6 +2620,8 @@ function editSvgText(mbIdx){
   box.querySelector('#olf-confirm-btn').addEventListener('click',()=>{
     const newText=field.value.trim();
     if(!newText){alert('Voer tekst in.');return;}
+    const missing=oneLineMissingChars(newText);
+    if(missing.length)alert('Niet beschikbare tekens: '+missing.join(' ')+'\nDeze worden overgeslagen.');
     // Keep existing colors where possible, add default for new letters
     const newColors=[];
     for(let i=0;i<newText.length;i++){
@@ -3466,8 +3472,8 @@ function animateDrawSlide(slideIdx,done){
 // Controls
 document.addEventListener('keydown',e=>{
   if(document.getElementById('presenter').style.display!=='block')return;
-  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();pNext();}
-  if(e.key==='ArrowLeft'){e.preventDefault();pPrev();}
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
   if(e.key==='Escape')stopPresentation();
 });
 document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
@@ -3488,9 +3494,9 @@ async function exportJSON(){
     subFont:s.subFont,subSize:s.subSize,subBold:s.subBold,subItalic:s.subItalic,
     bgColor:s.bgColor||'#ffffff',lineColor:s.lineColor||'#1a1a1a',subColor:s.subColor||'#1a1a1a',
     pathColors:s.pathColors||[],pathCount:s.pathCount||0,
-    textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text,x:tb.x,y:tb.y,font:tb.font,size:tb.size,bold:tb.bold,italic:tb.italic,align:tb.align,rotation:tb.rotation,color:tb.color||'#1a1a1a'})),
+    textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text,x:tb.x,y:tb.y,font:tb.font,size:tb.size,bold:tb.bold,italic:tb.italic,align:tb.align,rotation:tb.rotation,color:tb.color||'#1a1a1a',zOrder:tb.zOrder||0})),
     mediaBlocks:(s.mediaBlocks||[]).map(mb=>{
-      const base={type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,autoplay:mb.autoplay!==undefined?mb.autoplay:true};
+      const base={type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,autoplay:mb.autoplay!==undefined?mb.autoplay:true,zOrder:mb.zOrder||0};
       if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
       return base;
     })}));
@@ -3517,9 +3523,9 @@ document.getElementById('json-file-input').addEventListener('change',e=>{
       subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,subBold:!!s.subBold,subItalic:!!s.subItalic,
       bgColor:s.bgColor||'#ffffff',lineColor:s.lineColor||'#1a1a1a',subColor:s.subColor||'#1a1a1a',
       pathColors:s.pathColors||[],pathCount:s.pathCount||0,
-      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x??50,y:tb.y??50,font:tb.font||'Cormorant Garamond',size:tb.size??80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left',rotation:tb.rotation??0,color:tb.color||'#1a1a1a'})),
+      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x??50,y:tb.y??50,font:tb.font||'Cormorant Garamond',size:tb.size??80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left',rotation:tb.rotation??0,color:tb.color||'#1a1a1a',zOrder:tb.zOrder??0})),
       mediaBlocks:(s.mediaBlocks||[]).map(mb=>{
-        const base={type:mb.type||'image',src:mb.src||'',x:mb.x??200,y:mb.y??200,width:mb.width??400,height:mb.height??300,rotation:mb.rotation??0,opacity:mb.opacity??1,autoplay:mb.autoplay??true};
+        const base={type:mb.type||'image',src:mb.src||'',x:mb.x??200,y:mb.y??200,width:mb.width??400,height:mb.height??300,rotation:mb.rotation??0,opacity:mb.opacity??1,autoplay:mb.autoplay??true,zOrder:mb.zOrder??0};
         if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
         return base;
       })}));
@@ -3612,7 +3618,7 @@ async function loadFontsAsBase64(usedFamilies){
 
 async function exportStandaloneHTML(){
   saveInputs();
-  if(!slides.some(s=>s.svgPath||s.originalSVG)){alert('Upload eerst SVG\'s.');return;}
+  if(!slides.some(s=>s.svgPath||s.originalSVG||(s.mediaBlocks&&s.mediaBlocks.some(mb=>mb.type==='svgtext')))){alert('Upload eerst SVG\'s.');return;}
   const hasVideos=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='video'));
   const hasYouTube=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube'));
   if(hasVideos){alert('Let op: lokale video\'s worden niet meegenomen in de HTML-export.');}
@@ -3740,11 +3746,11 @@ async function exportStandaloneHTML(){
       textBlocks:(s.textBlocks||[]).map(tb=>({
         text:tb.text||'',x:tb.x,y:tb.y,font:tb.font||'Cormorant Garamond',
         size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,
-        align:tb.align||'left',rotation:tb.rotation||0,color:tb.color||'#1a1a1a'
+        align:tb.align||'left',rotation:tb.rotation||0,color:tb.color||'#1a1a1a',zOrder:tb.zOrder||0
       })),
       mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='video').map(mb=>{
         const base={type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,
-          rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1};
+          rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0};
         if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
         return base;
       })
@@ -4081,8 +4087,10 @@ function toggleFullscreen(){if(!document.fullscreenElement)document.documentElem
 document.addEventListener('fullscreenchange',()=>{fitPresentCanvas();if(pIdx>=0){rebuildTo(pIdx);showPresentTextBlocks(pIdx);stopPresentMediaBlocks();showPresentMediaBlocks(pIdx);}});
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();pNext();}
-  if(e.key==='ArrowLeft'){e.preventDefault();pPrev();}
+  // Zolang het startscherm zichtbaar is, start een toets alleen de presentatie (zie onder)
+  if(!document.getElementById('start-screen').classList.contains('hidden'))return;
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
   if(e.key==='Escape'&&document.fullscreenElement){e.preventDefault();document.exitFullscreen().catch(()=>{});}
 });
 document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
@@ -4101,17 +4109,20 @@ document.addEventListener('keydown',e=>{
 <\/script></body></html>`;
 
     // 7. Save
+    const safeName=(presTitle||'presentatie').replace(/[^a-zA-Z0-9 _-]/g,'')||'presentatie';
+    let saved=false;
     if(window.showSaveFilePicker){
       try{
-        const safeName=(presTitle||'presentatie').replace(/[^a-zA-Z0-9 _-]/g,'');
         const handle=await window.showSaveFilePicker({suggestedName:safeName+'.html',types:[{description:'HTML bestand',accept:{'text/html':['.html']}}]});
         const writable=await handle.createWritable();
         await writable.write(html);
         await writable.close();
+        saved=true;
       }catch(e){if(e.name==='AbortError'){btn.textContent=origText;btn.disabled=false;return;}}
-    }else{
+    }
+    if(!saved){
       const blob=new Blob([html],{type:'text/html'});
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='presentatie.html';a.click();
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safeName+'.html';a.click();
     }
   }catch(err){
     alert('Export mislukt: '+err.message);
