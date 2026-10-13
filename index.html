@@ -3757,8 +3757,10 @@ async function exportStandaloneHTML(){
     // 3. Punten per dia samplen: dezelfde functie als bij presenteren in de app
     pViewport={slideW:1920,slideH:1080,slideStride:1920*1.5,scale:1,padX:0,padY:0};
     sampleAllSlides();
-    const r1=v=>Math.round(v*10)/10;
-    const presampledSlides=pSlidePoints.map(pts=>pts.map(p=>({x:r1(p.x),y:r1(p.y),color:p.color,visible:p.visible!==false})));
+    // Afronden op 0,01 px houdt het bestand kleiner; grover afronden verandert de
+    // richting van verbindingen (die volgt uit de eerste/laatste punten van een dia).
+    const r2=v=>Math.round(v*100)/100;
+    const presampledSlides=pSlidePoints.map(pts=>pts.map(p=>({x:r2(p.x),y:r2(p.y),color:p.color,visible:p.visible!==false})));
 
     // 4. Diagegevens voor de runtime. One-line-tekst zit al in de punten;
     //    lokale video's gaan niet mee (zie melding hierboven).
