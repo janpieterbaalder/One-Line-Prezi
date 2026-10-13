@@ -8,8 +8,11 @@
  * online én op elke andere computer — zonder fetch.
  *
  * De lo/ro/s/f-metadata van elk teken zit in de BESTANDSNAAM; die wordt
- * dus ongewijzigd meegenomen. Voeg je een teken toe of pas je de metadata
- * aan, draai dan opnieuw:  npm run build:font
+ * dus ongewijzigd meegenomen. Bestandsnamen beginnen met "one line font_"
+ * gevolgd door "kleine a", "hoofdletter A", "cijfer 1" of "spatie".
+ * Voeg je een teken toe of pas je de metadata aan, draai dan opnieuw:
+ *   npm run build:font   (of dubbelklik update-font.bat)
+ * Schrijft assets/onelinefont.js én assets/onelinefont/manifest.json.
  */
 'use strict';
 const fs = require('fs');
@@ -29,5 +32,6 @@ const data = files.map(f => ({ file: f, svg: fs.readFileSync(path.join(DIR, f), 
 const js = '/* Automatisch gegenereerd door tools/build-onelinefont.js — niet handmatig bewerken. */\n'
   + 'window.ONE_LINE_FONT_DATA = ' + JSON.stringify(data) + ';\n';
 fs.writeFileSync(path.join(ROOT, 'assets', 'onelinefont.js'), js, 'utf8');
+fs.writeFileSync(path.join(DIR, 'manifest.json'), JSON.stringify(files, null, 4) + '\n', 'utf8');
 
-console.log(`One Line Font gebouwd: ${data.length} tekens → assets/onelinefont.js`);
+console.log(`One Line Font gebouwd: ${data.length} tekens → assets/onelinefont.js + manifest.json`);

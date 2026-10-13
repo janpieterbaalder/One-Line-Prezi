@@ -1,10 +1,22 @@
 @echo off
+chcp 65001 >nul
 cd /d "%~dp0"
-powershell -NoProfile -Command ^
-  "$files = Get-ChildItem 'assets\onelinefont\*.svg' | Sort-Object Name | ForEach-Object { $_.Name }; " ^
-  "$json = $files | ConvertTo-Json; " ^
-  "if ($files.Count -eq 1) { $json = '[ ' + $json + ' ]' }; " ^
-  "[System.IO.File]::WriteAllLines('assets\onelinefont\manifest.json', $json, [System.Text.UTF8Encoding]::new($false))"
-echo manifest.json bijgewerkt met %files% bestanden.
+echo ================================================
+echo   One Line - font opnieuw opbouwen
+echo ================================================
+echo.
+echo Scant de map assets\onelinefont\ en bouwt het
+echo ingesloten font (assets\onelinefont.js) en
+echo manifest.json opnieuw op.
+echo.
+node "tools\build-onelinefont.js"
+echo.
+if errorlevel 1 (
+  echo [FOUT] Opbouwen mislukt.
+  echo        Is Node.js geinstalleerd en staat het in PATH?
+) else (
+  echo Klaar. Herstart of herlaad de app om het
+  echo nieuwe font te laden.
+)
 echo.
 pause

@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-1.4.1-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.5.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)
@@ -43,7 +43,10 @@
 │  ♡  FEATURES.sys                              [_][□][×] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│  ✧  Ingebouwde one-line-art bibliotheek  (NIEUW)        │
+│  ✧  Ingebouwde one-line-art bibliotheek                 │
+│  ✧  One-line-font: a–z, A–Z, 0–9 en leestekens  (NIEUW) │
+│  ✧  Ongedaan maken / opnieuw  (NIEUW)                   │
+│  ✧  Automatisch bewaren + herstel na afsluiten  (NIEUW) │
 │  ✧  SVG one-line art upload  (drag & drop)              │
 │  ✧  Kleur per pad — onbeperkt saved palette             │
 │  ✧  Tekstblokken, afbeeldingen, video's, YouTube        │
@@ -110,12 +113,36 @@ online versie. Je kunt ze dus op elke computer kiezen via de knop **◫ Biblioth
 
 Het handgeschreven **one-line-font** ("Tekst als pad") zit eveneens ingesloten
 (`assets/onelinefont.js`), zodat het ook in de desktop-app (`file://`) en op elke
-computer werkt — zonder netwerk. Tekens aanpassen of toevoegen in
-`assets/onelinefont/` en daarna opnieuw genereren:
+computer werkt — zonder netwerk. Het font bevat kleine letters (`a–z`),
+hoofdletters (`A–Z`), cijfers (`0–9`) en de leestekens `. , ! ? - : ; ' " ( ) & / + =`;
+letters met een accent (é, ë, …) worden getekend als de letter zonder accent.
+
+Elk teken is een SVG in `assets/onelinefont/` met de metadata in de bestandsnaam:
+
+```
+one line font_kleine a (lo=0,0; ro=160,0; s=8,60; f=160,60).svg
+one line font_hoofdletter A (…).svg
+one line font_cijfer 1 (…).svg
+one line font_leesteken vraagteken (…).svg
+```
+
+`s` = startpunt en `f` = eindpunt van de lijn (y = 60 boven de basislijn, zodat
+tekens op elkaar aansluiten), `ro` = breedte. Leestekens hebben een naam in de
+bestandsnaam, omdat Windows `: ? / "` niet toestaat. Een pad zónder lijn
+(`stroke: none`) is een onzichtbare verbinding: de pen gaat daar even omhoog,
+zoals naar de punt van een `!`.
+
+Tekens aanpassen of toevoegen en daarna opnieuw insluiten (of dubbelklik
+`update-font.bat`):
 
 ```bash
 npm run build:font
 ```
+
+De hoofdletters, cijfers en leestekens zijn getekend met
+`tools/generate-onelinefont.js` (puntdefinities → SVG). Daarmee kun je ze
+opnieuw genereren, ook per teken: `npm run gen:font -- A ?`. Let op: dat
+overschrijft de SVG van die tekens, ook als je ze in Illustrator hebt bijgewerkt.
 
 ---
 
@@ -166,12 +193,26 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 
 ## ▓ KEYBOARD.sys ▓
 
+**Presenteren**
+
 | Toets | Actie |
 |:---:|:---|
-| `→` / `Spatie` / `Klik` | Volgende dia |
-| `←` | Vorige dia |
+| `→` / `Spatie` / `PgDn` / `Klik` | Volgende dia |
+| `←` / `PgUp` | Vorige dia |
 | `Esc` | Stop presentatie |
 | `F11` | Volledig scherm |
+
+**Bewerken**
+
+| Toets | Actie |
+|:---:|:---|
+| `Ctrl+Z` | Ongedaan maken |
+| `Ctrl+Y` / `Ctrl+Shift+Z` | Opnieuw |
+| `Ctrl+S` | Opslaan |
+| `Delete` / `Backspace` | Geselecteerd blok verwijderen |
+
+> Wijzigingen worden ook automatisch lokaal bewaard. Sluit je de app zonder op
+> te slaan, dan biedt hij bij de volgende start aan om ze te herstellen.
 
 ---
 

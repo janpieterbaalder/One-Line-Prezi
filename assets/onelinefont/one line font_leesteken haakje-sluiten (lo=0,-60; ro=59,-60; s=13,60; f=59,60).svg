@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Laag_1" data-name="Laag 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 59 260">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 8px;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: none;
+      }
+    </style>
+  </defs>
+  <path class="cls-2" d="M13,140L43.76,52"/>
+  <path class="cls-1" d="M43.76,52C46.96,65.68,51.87,75.97,52.64,90C53.64,108.1,50.82,122.36,46.64,140C42.23,158.62,37.67,173.13,28.64,190C21.03,204.22,11.59,213.04,2,226"/>
+  <path class="cls-2" d="M2,226L59,140"/>
+</svg>

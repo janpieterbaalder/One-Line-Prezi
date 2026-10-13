@@ -1,13 +1,14 @@
 {
   "name": "one-line-presentaties",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "One Line — One line art presentaties",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build:svglib": "node tools/build-svglibrary.js",
-    "build:font": "node tools/build-onelinefont.js"
+    "build:font": "node tools/build-onelinefont.js",
+    "gen:font": "node tools/generate-onelinefont.js"
   },
   "author": "Baalderborg Groep",
   "license": "UNLICENSED",
