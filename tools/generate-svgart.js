@@ -189,7 +189,8 @@ ART['kompas']=()=>{
    const coil=F.curve(t=>{const ang=G.rad(wrapA-46*t),c=[27*Math.cos(ang),by+27*Math.sin(ang),zc],o=G.rad(360*turns*t+200),rr=19-4*t;
      return[c[0]+rr*Math.cos(o)*Math.cos(ang),c[1]+rr*Math.cos(o)*Math.sin(ang),c[2]+rr*Math.sin(o)];},150);
    const c0=coil[0];
-   const lp=G.flowLine([[-60,312],[200,276],[430,300],{w:36,h:15,adv:9,tilt:-9,up:true},[640,250],[760,208],[c0[0]-60,c0[1]-34],c0]);
+   // het koord ligt met één losse, ruime lus (anders dan het lusje bij de zandloper)
+   const lp=G.flowLine([[-60,312],[200,280],[420,302],{w:56,h:31,adv:15,tilt:-16,up:true,skew:0.26,lead:62},[650,246],[760,208],[c0[0]-60,c0[1]-34],c0]);
    cord.push(...lp,...coil.slice(1));
    cord.push(F.p([33*Math.cos(G.rad(wrapA-58)),by+33*Math.sin(G.rad(wrapA-58)),zc]));
   }
@@ -197,7 +198,7 @@ ART['kompas']=()=>{
   // uitloop: van de rechterkant van de kast naar rechts buiten beeld
   const ex=F.p(at(Rb,-D,vis[0]+ (vis[0]<0?0:0) ));
   const exitPt=F.p(at(Rb,-D,(vis[0]+vis[1])/2-62));
-  const exitLine=G.flowLine([exitPt,[exitPt[0]+56,exitPt[1]+34],[1330,744],[1500,720],{w:38,h:16,adv:10,tilt:-7},[1720,690],[1980,688]]);
+  const exitLine=G.flowLine([exitPt,[exitPt[0]+56,exitPt[1]+34],[1330,744],[1520,724],[1720,694],[1980,690]]);
   S.add(exitLine,'exit');
   // zichtbaarheid
   const rimPoly=ring(0,R);
@@ -293,14 +294,14 @@ ART['wegwijzer']=()=>{
   };
   // grond: van links naar de paal (met een graspol), en van de paal naar rechts (steen, graspol)
   const gl0=P(c(-128,0,hw+30)),gl1=tuft(-128,hw+30,6,38,6,1.3);
-  const entry=G.flowLine([[-60,724],[240,700],[470,716],{w:38,h:16,adv:10,tilt:-5},[690,734],[gl0[0]-50,gl0[1]-1],gl0]);
+  const entry=G.flowLine([[-60,724],[240,702],[470,718],[690,733],[gl0[0]-50,gl0[1]-1],gl0]);
   S.add(entry,'ground');
   S.add(smooth([gl1,[gl1[0]+16,gl1[1]-1],P(FL(0))]),'ground');
   const st=stone(hw+62,0,36,25,24);
   S.add([P(BR(0)),st[0]],'ground').add(smooth(st,4),'ground');
   const gr0=P(c(hw+128,0,0)),gr1=tuft(hw+128,0,7,44,7,0.4);
   S.add(smooth([st[st.length-1],[(st[st.length-1][0]+gr0[0])/2,(st[st.length-1][1]+gr0[1])/2+3],gr0]),'ground');
-  const exitLine=G.flowLine([gr1,[gr1[0]+44,gr1[1]-2],[1320,740],[1500,722],{w:38,h:16,adv:10,tilt:-7},[1730,700],[1980,708]]);
+  const exitLine=G.flowLine([gr1,[gr1[0]+44,gr1[1]-2],[1320,740],[1520,724],[1730,702],[1980,708]]);
   S.add(exitLine,'ground');
   // zichtbaarheid: planken staan vóór de paal
   for(const pl of planks)S.hide(G.hull(pl.poly),['post','grain']);
@@ -394,11 +395,11 @@ ART['boom-loslaten']=()=>{
   const ends=twigs.slice().sort((a,b)=>a.tip[0]-b.tip[0]);
   const step=Math.max(1,Math.floor(ends.length/6));
   for(let k=1;k<ends.length;k+=step){const tw=ends[k],d=tw.tan(1),ang=Math.atan2(d[1],d[0])+(k%2?0.6:-0.6);const L=leafShape(tw.tip,ang,44,13,k%2?1:-1);S.add(L.a,'leaf').add(L.b,'leaf').add(L.rib,'leaf');}
-  // grond: links zacht aflopend met een lus, midden vloeiend (loopt onder de
-  // boom door), rechts met een lus
+  // grond: links zacht aflopend, midden vloeiend (loopt onder de boom door),
+  // rechts licht oplopend; geen lusjes, de zwevende blaadjes zijn de versiering
   const gMid=smooth([[600,GY+8],[700,GY+3],[820,GY+1],[930,GY+1],[1040,GY+1],[1150,GY+4],[1240,GY+8]],3);
-  const gLeft=G.flowLine([[-60,702],[160,709],[330,721],{w:38,h:16,adv:10,tilt:-1},[500,GY+7],gMid[0]]);
-  const gRight=G.flowLine([gMid[gMid.length-1],[1330,GY+6],[1440,GY-6],{w:38,h:16,adv:10,tilt:-6},[1700,GY-26],[1980,GY-20]]);
+  const gLeft=G.flowLine([[-60,702],[160,709],[330,719],[500,GY+7],gMid[0]]);
+  const gRight=G.flowLine([gMid[gMid.length-1],[1330,GY+6],[1490,GY-6],[1700,GY-20],[1980,GY-20]]);
   S.add(gLeft,'ground').add(gMid,'ground').add(gRight,'ground');
   // zwevend blad: steeltje, twee bladhelften en een middennerf (lichte boog);
   // de pen komt binnen bij het steeltje en gaat weg bij het eind van de nerf
