@@ -8,7 +8,8 @@
     "build": "electron-builder",
     "build:svglib": "node tools/build-svglibrary.js",
     "build:font": "node tools/build-onelinefont.js",
-    "gen:font": "node tools/generate-onelinefont.js"
+    "gen:font": "node tools/generate-onelinefont.js",
+    "gen:svgart": "node tools/generate-svgart.js"
   },
   "author": "Baalderborg Groep",
   "license": "UNLICENSED",

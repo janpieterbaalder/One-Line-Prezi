@@ -2411,6 +2411,7 @@ function sampleSVGToPoints(svgText, totalPts, opts){
   const paths=svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect');
   const allPoints=[];
   const pathStrokes=[];
+  const pathInvisible=[]; // per pad: onzichtbare verbinding (data-invisible)?
   let usedFast=true;
   let pathIdx=0;
   // Count visible paths so invisible ones don't eat into the point budget
@@ -2434,11 +2435,15 @@ function sampleSVGToPoints(svgText, totalPts, opts){
     const stroke=el.getAttribute('stroke')||el.style.stroke||'';
     const invisible=el.getAttribute('data-invisible')==='true';
     pathStrokes.push(stroke);
+    pathInvisible.push(invisible);
     if(el.tagName==='path'){
       const d=el.getAttribute('d').replace(/[Zz]/g,'');
       // Invisible paths: sample minimally (just 2 points for position), don't consume animation budget
       const ptsPerPath=invisible?2:lenShare?Math.max(4,Math.round(totalPts*lenShare[elIdx])):(Math.round(totalPts/visiblePathCount)||totalPts);
-      const pts=fastSamplePath(d,ptsPerPath);
+      let pts=fastSamplePath(d,ptsPerPath);
+      // fastSamplePath geeft elk Bézier-stuk minstens 3 punten; een onzichtbare
+      // verbinding houdt alleen begin en eind, zodat de pen er meteen overheen springt
+      if(pts&&invisible&&pts.length>2)pts=[pts[0],pts[pts.length-1]];
       if(pts){pts.forEach(p=>{p.pathIdx=pathIdx;if(invisible)p.invisible=true;});allPoints.push(...pts);pathIdx++;return;}
       usedFast=false;
     } else {usedFast=false;}
@@ -2450,9 +2455,9 @@ function sampleSVGToPoints(svgText, totalPts, opts){
     const domPts=domSampleSVG(svgText,density,100,Math.min(totalPts,800));
     // DOM fallback: all points get pathIdx 0
     domPts.forEach(p=>{p.pathIdx=0;});
-    return{points:domPts,pathCount:1,pathStrokes:pathStrokes};
+    return{points:domPts,pathCount:1,pathStrokes:pathStrokes,pathInvisible:[false]};
   }
-  return{points:allPoints,pathCount:pathIdx,pathStrokes:pathStrokes};
+  return{points:allPoints,pathCount:pathIdx,pathStrokes:pathStrokes,pathInvisible:pathInvisible};
 }
 
 function processSVGUpload(svgText){
@@ -2465,10 +2470,13 @@ function processSVGUpload(svgText){
     let d='';allPoints.forEach((p,i)=>{d+=(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1)+' ';});
     // Initialize pathColors from SVG stroke colors or defaults
     const lineColor=slides[currentSlide].lineColor||'#1a1a1a';
+    // Paden met data-invisible="true" (bijv. in tekeningen uit de bibliotheek)
+    // zijn onzichtbare verbindingen: de pen gaat daar zonder te tekenen naar
+    // een los deel, zoals een zwevend blaadje.
     const pathColors=Array.from({length:result.pathCount},(_,i)=>{
       const origStroke=result.pathStrokes[i];
       const color=(origStroke&&origStroke!=='none'&&origStroke!=='')?origStroke:lineColor;
-      return{color:color,visible:true};
+      return{color:color,visible:!(result.pathInvisible&&result.pathInvisible[i])};
     });
     return{sampledPath:d.trim(),originalSVG:svgText,pathCount:result.pathCount,pathColors:pathColors};
   }catch(err){alert('Fout: '+err.message);return null;}
@@ -3565,7 +3573,11 @@ function sampleAllSlides(){
     if(s.originalSVG||s.svgPath){
       let rawPts;
       if(s.originalSVG){
-        const result=sampleSVGToPoints(s.originalSVG,3000);
+        // Een tekening met onzichtbare verbindingen bestaat uit zichtbare stukken
+        // van heel verschillende lengte (de hele boom, dan een blaadje): verdeel
+        // de punten dan naar lengte, zodat de pen een gelijkmatig tempo houdt.
+        const hasAir=/data-invisible\s*=\s*["']true["']/.test(s.originalSVG);
+        const result=sampleSVGToPoints(s.originalSVG,3000,hasAir?{byLength:true}:undefined);
         rawPts=result.points;
         if(rawPts.length>1){const first=rawPts[0],last=rawPts[rawPts.length-1];let mnX=Infinity,mxX=-Infinity;for(const p of rawPts){if(p.x<mnX)mnX=p.x;if(p.x>mxX)mxX=p.x;}const w=mxX-mnX;if(w>0&&(first.x-last.x)>w*0.3)rawPts.reverse();}
       } else {
@@ -3583,7 +3595,7 @@ function sampleAllSlides(){
       rawPts.forEach(p=>{
         const pathInfo=s.pathColors&&s.pathColors[p.pathIdx];
         const color=pathInfo?pathInfo.color:(s.lineColor||'#1a1a1a');
-        const visible=pathInfo?pathInfo.visible:true;
+        const visible=pathInfo?pathInfo.visible:!p.invisible;
         allPts.push({x:(p.x*fit.sc+fit.ox)*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:(p.y*fit.sc+fit.oy)*pViewport.scale+pViewport.padY,color:color,visible:visible});
       });
     }

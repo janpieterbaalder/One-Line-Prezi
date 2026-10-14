@@ -24,6 +24,10 @@
     "file": "boeken.svg"
   },
   {
+    "name": "Boom met vallend blad",
+    "file": "boom-loslaten.svg"
+  },
+  {
     "name": "Bullitpoints",
     "file": "bullitpoints.svg"
   },
@@ -54,6 +58,10 @@
   {
     "name": "Herstel na trauma",
     "file": "herstel-na-trauma-01.svg"
+  },
+  {
+    "name": "Kompas",
+    "file": "kompas.svg"
   },
   {
     "name": "Lego",
@@ -104,7 +112,15 @@
     "file": "weegschaal-01.svg"
   },
   {
+    "name": "Wegwijzer",
+    "file": "wegwijzer.svg"
+  },
+  {
     "name": "Welkom",
     "file": "welkom-01.svg"
+  },
+  {
+    "name": "Zandloper",
+    "file": "zandloper.svg"
   }
 ]
