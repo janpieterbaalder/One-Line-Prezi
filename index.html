@@ -341,8 +341,21 @@
   .modal-box.svglib::before{content:'▓ BIBLIOTHEEK.svg  □ ×'}
   .svglib-hint{font-family:var(--font-ui);font-size:14px;color:var(--ink-light);margin:-6px 0 14px}
   #svglib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;max-height:60vh;overflow:auto;margin-bottom:18px;padding:2px}
-  .svglib-item{border:2px solid var(--border);background:var(--panel);box-shadow:var(--hard-shadow-sm);cursor:pointer;display:flex;flex-direction:column;align-items:stretch;padding:0;transition:transform .1s,background .1s}
+  .svglib-cell{position:relative;display:flex}
+  .svglib-item{flex:1;width:100%;border:2px solid var(--border);background:var(--panel);box-shadow:var(--hard-shadow-sm);cursor:pointer;display:flex;flex-direction:column;align-items:stretch;padding:0;transition:transform .1s,background .1s}
   .svglib-item:hover{transform:translate(-2px,-2px);background:var(--accent-yellow)}
+  .svglib-cell.hidden-item .svglib-thumb img{opacity:.35}
+  .svglib-del{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border:2px solid var(--border);border-radius:50%;background:var(--danger);color:#fff;font-family:var(--font-ui);font-size:17px;line-height:18px;cursor:pointer;box-shadow:var(--hard-shadow-sm);opacity:0;transition:opacity .15s,transform .1s;z-index:2}
+  .svglib-del.restore{background:var(--accent-cyan);color:var(--border);opacity:1;font-size:15px}
+  .svglib-cell:hover .svglib-del,.svglib-del:focus-visible{opacity:1}
+  .svglib-cell:hover .svglib-del{transform:translate(-2px,-2px)}
+  .svglib-del:hover{background:var(--accent-2)}
+  .svglib-del.restore:hover{background:var(--accent-yellow)}
+  .svglib-actions{display:flex;gap:8px;flex-wrap:wrap}
+  #svglib-hidden-btn:empty{display:none}
+  #svglib-undo{font-family:var(--font-ui);font-size:14px;color:var(--ink);min-height:0;margin:-8px 0 12px}
+  #svglib-undo:empty{display:none}
+  #svglib-undo button{background:none;border:none;border-bottom:1px dashed var(--accent);color:var(--accent);font-family:inherit;font-size:inherit;cursor:pointer;padding:0;margin-left:6px}
   .svglib-thumb{height:96px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;border-bottom:2px solid var(--border)}
   .svglib-thumb img{max-width:88%;max-height:84px;width:auto;height:auto;pointer-events:none}
   .svglib-name{font-family:var(--font-ui);font-size:12px;color:var(--ink);padding:6px 4px;text-align:center;line-height:1.25}
@@ -448,6 +461,12 @@
   body.classic .modal-box kbd{background:var(--surface);border-width:1px;border-radius:3px;padding:1px 7px;box-shadow:none;font-size:11px;color:var(--accent)}
   body.classic .svglib-hint{font-family:'Outfit',sans-serif;font-size:12px}
   body.classic .svglib-item{border-width:1px;border-radius:8px;box-shadow:none;overflow:hidden}
+  body.classic .svglib-del{border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);font-family:'Outfit',sans-serif;font-size:14px;line-height:19px}
+  body.classic .svglib-del.restore{background:var(--accent);color:#fff}
+  body.classic .svglib-cell:hover .svglib-del{transform:none}
+  body.classic .svglib-del:hover{background:#a33}
+  body.classic .svglib-del.restore:hover{background:var(--accent-2)}
+  body.classic #svglib-undo{font-family:'Outfit',sans-serif;font-size:12px}
   body.classic .svglib-item:hover{transform:none;background:rgba(184,96,42,.06)}
   body.classic .svglib-thumb{border-bottom-width:1px}
   body.classic .svglib-name{font-family:'Outfit',sans-serif}
@@ -668,11 +687,15 @@
 
 <div class="modal-bg" id="svglib-modal" onclick="this.classList.remove('visible')">
   <div class="modal-box svglib" onclick="event.stopPropagation()">
-    <h2>Bibliotheek</h2>
-    <p class="svglib-hint">Kies een ingebouwde one-line-art afbeelding voor deze dia. Werkt op elke computer — geen losse bestanden nodig.</p>
+    <h2 id="svglib-title">Bibliotheek</h2>
+    <p class="svglib-hint" id="svglib-hint"></p>
     <div id="svglib-grid"></div>
-    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible');pickSvgFile()">⤓ Eigen SVG…</button>
-    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible')">Sluiten</button>
+    <div id="svglib-undo"></div>
+    <div class="svglib-actions">
+      <button class="t-btn" id="svglib-own-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible');pickSvgFile()">⤓ Eigen SVG…</button>
+      <button class="t-btn" id="svglib-hidden-btn" onclick="toggleSvgLibraryHidden()"></button>
+      <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible')">Sluiten</button>
+    </div>
   </div>
 </div>
 
@@ -3221,22 +3244,82 @@ function handleSVGFile(file){
 function pickSvgFile(){document.getElementById('svg-file-input').click();}
 
 // ── Ingebouwde SVG-bibliotheek ──
+// Afbeeldingen verwijderen uit de bibliotheek: de ingebouwde bestanden zelf
+// kunnen niet weg (in de geïnstalleerde app zitten ze alleen-lezen in het
+// app-pakket), dus onthouden we per computer welke afbeeldingen verborgen zijn
+// (localStorage; de desktop-app heeft daarvoor een vaste origin, zie main.js).
+// Verwijderde afbeeldingen zijn terug te zetten via de knop "Verwijderde".
+const SVGLIB_HIDDEN_KEY='one-line-prezi-svglib-hidden';
+let svgLibShowHidden=false,svgLibUndo=null;
+function getHiddenLibraryFiles(){
+  try{const v=JSON.parse(localStorage.getItem(SVGLIB_HIDDEN_KEY));return Array.isArray(v)?v:[];}catch(e){return[];}
+}
+function setHiddenLibraryFiles(files){
+  try{localStorage.setItem(SVGLIB_HIDDEN_KEY,JSON.stringify(files));}catch(e){}
+}
 function openSvgLibrary(){
+  svgLibShowHidden=false;svgLibUndo=null;
+  renderSvgLibrary();
+  document.getElementById('svglib-modal').classList.add('visible');
+}
+function renderSvgLibrary(){
   const grid=document.getElementById('svglib-grid');
   const lib=window.SVG_LIBRARY||[];
-  if(!grid.dataset.loaded){
-    grid.innerHTML = lib.length
-      ? lib.map((it,i)=>`<button class="svglib-item" onclick="chooseLibrarySVG(${i})" title="${escHTML(it.name)}"><span class="svglib-thumb"><img src="assets/svglibrary/${encodeURIComponent(it.file)}" alt="" loading="lazy"></span><span class="svglib-name">${escHTML(it.name)}</span></button>`).join('')
-      : '<div class="svglib-empty">Geen afbeeldingen in de bibliotheek.</div>';
-    grid.dataset.loaded='1';
-  }
-  document.getElementById('svglib-modal').classList.add('visible');
+  const hidden=new Set(getHiddenLibraryFiles());
+  const hiddenCount=lib.filter(it=>hidden.has(it.file)).length;
+  if(!hiddenCount)svgLibShowHidden=false;
+  const shown=lib.map((it,i)=>({it,i})).filter(({it})=>hidden.has(it.file)===svgLibShowHidden);
+  grid.innerHTML = shown.length
+    ? shown.map(({it,i})=>{
+        const name=escHTML(it.name);
+        const thumb=`<span class="svglib-thumb"><img src="assets/svglibrary/${encodeURIComponent(it.file)}" alt="" loading="lazy"></span><span class="svglib-name">${name}</span>`;
+        return svgLibShowHidden
+          ? `<div class="svglib-cell hidden-item"><button class="svglib-item" onclick="restoreLibrarySVG(${i})" title="${name} terugzetten">${thumb}</button><button class="svglib-del restore" onclick="restoreLibrarySVG(${i})" title="${name} terugzetten in de bibliotheek" aria-label="${name} terugzetten">↺</button></div>`
+          : `<div class="svglib-cell"><button class="svglib-item" onclick="chooseLibrarySVG(${i})" title="${name}">${thumb}</button><button class="svglib-del" onclick="hideLibrarySVG(${i})" title="${name} uit de bibliotheek verwijderen" aria-label="${name} verwijderen">×</button></div>`;
+      }).join('')
+    : `<div class="svglib-empty">${lib.length?'Alle afbeeldingen zijn verwijderd. Zet ze terug via “Verwijderde”.':'Geen afbeeldingen in de bibliotheek.'}</div>`;
+  document.getElementById('svglib-title').textContent=svgLibShowHidden?'Verwijderde afbeeldingen':'Bibliotheek';
+  document.getElementById('svglib-hint').textContent=svgLibShowHidden
+    ?'Klik op een afbeelding (of ↺) om die terug te zetten in de bibliotheek.'
+    :'Kies een ingebouwde one-line-art afbeelding voor deze dia. Werkt op elke computer — geen losse bestanden nodig. Met × verwijder je een afbeelding uit de bibliotheek.';
+  document.getElementById('svglib-hidden-btn').textContent=svgLibShowHidden?'← Terug naar bibliotheek':(hiddenCount?`↺ Verwijderde (${hiddenCount})`:'');
+  document.getElementById('svglib-own-btn').style.display=svgLibShowHidden?'none':'';
+  const undo=document.getElementById('svglib-undo');
+  if(svgLibUndo&&!svgLibShowHidden){
+    undo.innerHTML=`“${escHTML(svgLibUndo.name)}” is uit de bibliotheek verwijderd.<button onclick="undoHideLibrarySVG()">Ongedaan maken</button>`;
+  }else undo.innerHTML='';
 }
 function chooseLibrarySVG(i){
   const it=(window.SVG_LIBRARY||[])[i];
   if(!it)return;
   applySVGToSlide(it.svg);
   document.getElementById('svglib-modal').classList.remove('visible');
+}
+function hideLibrarySVG(i){
+  const it=(window.SVG_LIBRARY||[])[i];
+  if(!it)return;
+  const hidden=getHiddenLibraryFiles();
+  if(!hidden.includes(it.file))hidden.push(it.file);
+  setHiddenLibraryFiles(hidden);
+  svgLibUndo={file:it.file,name:it.name};
+  renderSvgLibrary();
+}
+function undoHideLibrarySVG(){
+  if(!svgLibUndo)return;
+  const file=svgLibUndo.file;
+  setHiddenLibraryFiles(getHiddenLibraryFiles().filter(f=>f!==file));
+  svgLibUndo=null;
+  renderSvgLibrary();
+}
+function restoreLibrarySVG(i){
+  const it=(window.SVG_LIBRARY||[])[i];
+  if(!it)return;
+  setHiddenLibraryFiles(getHiddenLibraryFiles().filter(f=>f!==it.file));
+  renderSvgLibrary();
+}
+function toggleSvgLibraryHidden(){
+  svgLibShowHidden=!svgLibShowHidden;svgLibUndo=null;
+  renderSvgLibrary();
 }
 function clearCurrentArt(){slides[currentSlide].svgPath='';slides[currentSlide].originalSVG='';slides[currentSlide].pathLength=0;slides[currentSlide].pathCount=0;slides[currentSlide].pathColors=[];renderPreview();updateSlideList();renderPathColorsPanel();}
 
