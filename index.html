@@ -3047,22 +3047,34 @@ function startAnchorDrag(e,mbIdx,side,pointIdx,scaleX,scaleY){
   document.addEventListener('mouseup',onUp);
 }
 
+// Ruimte tussen twee cijfers (fontcoördinaten; een spatie is 80 breed). De
+// cijfers worden daar verbonden met een kort onzichtbaar lijntje: de pen gaat
+// even omhoog, zodat een getal als 2026 uit losse cijfers bestaat in plaats
+// van in elkaar over te lopen.
+const ONE_LINE_DIGIT_GAP=34;
 function composeOneLineText(text, letterColors){
   const SPACE_W=60;
   const paths=[];let cursorX=0;let totalW=0;let isFirst=true;
   let letterIdx=0;
   let maxSvgHeight=200;
+  let prevDigit=false,prevFinishY=0;
   for(const ch of text){
-    if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;continue;}
+    if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;prevDigit=false;continue;}
     const g=oneLineGlyph(ch);
     if(!g){letterIdx++;continue;}
     if(g.svgHeight>maxSvgHeight)maxSvgHeight=g.svgHeight;
+    const isDigit=/^[0-9]$/.test(ch);
     let dx=0;
     if(isFirst){
       dx=-g.startX;
       cursorX=dx;
       isFirst=false;
     }else{
+      if(isDigit&&prevDigit){
+        const x2=cursorX+ONE_LINE_DIGIT_GAP;
+        paths.push({d:`M${cursorX.toFixed(2)},${prevFinishY.toFixed(2)}L${x2.toFixed(2)},${g.startY.toFixed(2)}`,color:'none',idx:letterIdx,visible:false});
+        cursorX=x2;
+      }
       dx=cursorX-g.startX;
     }
     const color=(letterColors&&letterColors[letterIdx])||'#1a1a1a';
@@ -3078,6 +3090,7 @@ function composeOneLineText(text, letterColors){
     }
     cursorX=dx+g.finishX;
     totalW=Math.max(totalW,dx+g.width);
+    prevDigit=isDigit;prevFinishY=g.finishY;
     letterIdx++;
   }
   // Onzichtbare verbindingen aan begin en eind weglaten (bijv. na een punt of
@@ -3429,16 +3442,23 @@ function artFitTransform(originalSVG){
 // naartoe (zelfde Bézier als tussen dia's), met evenveel punten per pixel als
 // het element zelf. Zo tekent de verbinding op tekensnelheid door in plaats
 // van in één frame als rechte streep over de dia te verschijnen.
-function appendWithConnector(allPts,groupPts){
+// penUp (van tekstpad naar tekstpad): de verbinding is onzichtbaar en krijgt
+// maar een fractie van die punten, zodat de pen snel naar het volgende pad
+// gaat en er weinig tijd zit tussen het schrijven van het ene en het andere.
+const PEN_UP_SPEEDUP=0.12;
+function appendWithConnector(allPts,groupPts,penUp){
   if(!groupPts.length)return;
   const last=allPts[allPts.length-1],first=groupPts[0];
   if(last&&last.visible!==false&&first.visible!==false){
     const dist=Math.hypot(first.x-last.x,first.y-last.y);
     if(dist>3){
-      const n=Math.max(8,Math.min(400,Math.round(dist*pointDensity(groupPts))));
+      const density=pointDensity(groupPts);
+      const n=penUp
+        ?Math.max(4,Math.min(30,Math.round(dist*density*PEN_UP_SPEEDUP)))
+        :Math.max(8,Math.min(400,Math.round(dist*density)));
       const conn=generateConnectionPoints(allPts,groupPts,n);
       conn.pop(); // laatste punt valt samen met het begin van het element
-      for(const p of conn)allPts.push(p);
+      for(const p of conn){if(penUp)p.visible=false;allPts.push(p);}
     }
   }
   for(const p of groupPts)allPts.push(p);
@@ -3486,6 +3506,7 @@ function sampleAllSlides(){
     }
     // Sample svgtext media blocks
     if(s.mediaBlocks){
+      let prevWasText=false; // volgt dit tekstpad op een ander tekstpad?
       s.mediaBlocks.forEach(mb=>{
         if(mb.type!=='svgtext')return;
         const blockPts=[];
@@ -3547,22 +3568,30 @@ function sampleAllSlides(){
         }
         // Text points — resample visible points to textBudget, keep invisible as gap markers
         const textStep=Math.max(1,Math.floor(visTextPts.length/textBudget));
-        let visIdx=0;
+        const pushVisible=p=>{
+          let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
+          if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
+          const color=pathColors[p.pathIdx]||'#1a1a1a';
+          blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
+        };
+        let visIdx=0,skipped=null,afterGap=false;
         for(let ti=0;ti<result.points.length;ti++){
           const p=result.points[ti];
           if(p.invisible){
+            // Het laatste zichtbare punt vóór een onderbreking (spatie, cijfer,
+            // punt op de i) altijd meenemen, anders stopt de lijn iets te vroeg.
+            if(skipped){pushVisible(skipped);skipped=null;}
             // Always include invisible points as gap markers (moveTo triggers)
             let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
             if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
             blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:'#1a1a1a',visible:false});
+            afterGap=true;
           } else {
-            // Downsample visible points by textStep
-            if(visIdx%textStep===0){
-              let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
-              if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
-              const color=pathColors[p.pathIdx]||'#1a1a1a';
-              blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
-            }
+            // Downsample visible points by textStep (het eerste punt na een
+            // onderbreking altijd meenemen, anders begint de lijn te laat)
+            if(afterGap||visIdx%textStep===0){pushVisible(p);skipped=null;}
+            else skipped=p;
+            afterGap=false;
             visIdx++;
           }
         }
@@ -3581,7 +3610,8 @@ function sampleAllSlides(){
             blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:rightSampled.color,visible:true});
           });
         }
-        appendWithConnector(allPts,blockPts);
+        appendWithConnector(allPts,blockPts,prevWasText);
+        prevWasText=true;
       });
     }
     pSlidePoints.push(allPts);
