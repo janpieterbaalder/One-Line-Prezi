@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-1.5.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.6.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)
@@ -44,9 +44,14 @@
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ✧  Ingebouwde one-line-art bibliotheek                 │
-│  ✧  One-line-font: a–z, A–Z, 0–9 en leestekens  (NIEUW) │
-│  ✧  Ongedaan maken / opnieuw  (NIEUW)                   │
-│  ✧  Automatisch bewaren + herstel na afsluiten  (NIEUW) │
+│  ✧  3D-tekeningen: zandloper, kompas, wegwijzer,        │
+│       boom met vallend blad  (NIEUW)                    │
+│  ✧  Bibliotheek: verwijderen en terugzetten  (NIEUW)    │
+│  ✧  One-line-font: a–z, A–Z, 0–9 en leestekens          │
+│  ✧  Tekstpaden: mini-spatie tussen cijfers, snel        │
+│       en onzichtbaar van pad naar pad  (NIEUW)          │
+│  ✧  Ongedaan maken / opnieuw                            │
+│  ✧  Automatisch bewaren + herstel na afsluiten          │
 │  ✧  SVG one-line art upload  (drag & drop)              │
 │  ✧  Kleur per pad — onbeperkt saved palette             │
 │  ✧  Tekstblokken, afbeeldingen, video's, YouTube        │
@@ -109,6 +114,30 @@ online versie. Je kunt ze dus op elke computer kiezen via de knop **◫ Biblioth
 > `-01` wordt weggelaten). Pas namen desgewenst aan in `assets/svglibrary/manifest.json`;
 > die blijven bij een volgende `npm run build:svglib` behouden.
 
+**Opruimen:** beweeg in de bibliotheek over een afbeelding en klik op **×** om
+hem te verbergen (direct ongedaan te maken). Via **↺ Verwijderde** zet je
+afbeeldingen terug. Dit wordt per computer onthouden; de bestanden zelf blijven
+in de app, dus een verwijderde afbeelding is nooit echt weg.
+
+### ▒ 3D-TEKENINGEN ▒
+
+De zandloper, het kompas, de wegwijzer en de boom met vallend blad zijn
+**gegenereerd** met `tools/generate-svgart.js`. Die gebruikt een kleine
+tekenmotor (`tools/svgart-engine.js`): echte 3D-vormen (draaivlakken, buizen,
+cilinders) met een camera, verborgen lijnen weggeknipt, en daarna één
+doorlopende penroute over alle lijnen (zo weinig mogelijk dubbel getekend).
+
+```bash
+npm run gen:svgart              # alle tekeningen opnieuw
+npm run gen:svgart -- kompas    # alleen het kompas
+npm run build:svglib            # daarna opnieuw insluiten
+```
+
+Een pad met `data-invisible="true"` is een **onzichtbare verbinding**: de pen
+gaat daar zonder te tekenen (en meteen) naar een los deel, zoals de zwevende
+blaadjes bij de boom. In de editor zie je zo'n pad gestippeld en staat het in
+het pad-paneel op onzichtbaar.
+
 ### ▒ ONE LINE FONT ▒
 
 Het handgeschreven **one-line-font** ("Tekst als pad") zit eveneens ingesloten
@@ -116,6 +145,10 @@ Het handgeschreven **one-line-font** ("Tekst als pad") zit eveneens ingesloten
 computer werkt — zonder netwerk. Het font bevat kleine letters (`a–z`),
 hoofdletters (`A–Z`), cijfers (`0–9`) en de leestekens `. , ! ? - : ; ' " ( ) & / + =`;
 letters met een accent (é, ë, …) worden getekend als de letter zonder accent.
+Tussen twee cijfers zet de app automatisch een korte onzichtbare verbinding
+(een mini-spatie), zodat `2026` als losse cijfers leesbaar blijft. Staan er
+meerdere tekstpaden op één dia, dan gaat de pen onzichtbaar en snel van het ene
+naar het volgende pad.
 
 Elk teken is een SVG in `assets/onelinefont/` met de metadata in de bestandsnaam:
 
