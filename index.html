@@ -341,8 +341,21 @@
   .modal-box.svglib::before{content:'▓ BIBLIOTHEEK.svg  □ ×'}
   .svglib-hint{font-family:var(--font-ui);font-size:14px;color:var(--ink-light);margin:-6px 0 14px}
   #svglib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;max-height:60vh;overflow:auto;margin-bottom:18px;padding:2px}
-  .svglib-item{border:2px solid var(--border);background:var(--panel);box-shadow:var(--hard-shadow-sm);cursor:pointer;display:flex;flex-direction:column;align-items:stretch;padding:0;transition:transform .1s,background .1s}
+  .svglib-cell{position:relative;display:flex}
+  .svglib-item{flex:1;width:100%;border:2px solid var(--border);background:var(--panel);box-shadow:var(--hard-shadow-sm);cursor:pointer;display:flex;flex-direction:column;align-items:stretch;padding:0;transition:transform .1s,background .1s}
   .svglib-item:hover{transform:translate(-2px,-2px);background:var(--accent-yellow)}
+  .svglib-cell.hidden-item .svglib-thumb img{opacity:.35}
+  .svglib-del{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border:2px solid var(--border);border-radius:50%;background:var(--danger);color:#fff;font-family:var(--font-ui);font-size:17px;line-height:18px;cursor:pointer;box-shadow:var(--hard-shadow-sm);opacity:0;transition:opacity .15s,transform .1s;z-index:2}
+  .svglib-del.restore{background:var(--accent-cyan);color:var(--border);opacity:1;font-size:15px}
+  .svglib-cell:hover .svglib-del,.svglib-del:focus-visible{opacity:1}
+  .svglib-cell:hover .svglib-del{transform:translate(-2px,-2px)}
+  .svglib-del:hover{background:var(--accent-2)}
+  .svglib-del.restore:hover{background:var(--accent-yellow)}
+  .svglib-actions{display:flex;gap:8px;flex-wrap:wrap}
+  #svglib-hidden-btn:empty{display:none}
+  #svglib-undo{font-family:var(--font-ui);font-size:14px;color:var(--ink);min-height:0;margin:-8px 0 12px}
+  #svglib-undo:empty{display:none}
+  #svglib-undo button{background:none;border:none;border-bottom:1px dashed var(--accent);color:var(--accent);font-family:inherit;font-size:inherit;cursor:pointer;padding:0;margin-left:6px}
   .svglib-thumb{height:96px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;border-bottom:2px solid var(--border)}
   .svglib-thumb img{max-width:88%;max-height:84px;width:auto;height:auto;pointer-events:none}
   .svglib-name{font-family:var(--font-ui);font-size:12px;color:var(--ink);padding:6px 4px;text-align:center;line-height:1.25}
@@ -448,6 +461,12 @@
   body.classic .modal-box kbd{background:var(--surface);border-width:1px;border-radius:3px;padding:1px 7px;box-shadow:none;font-size:11px;color:var(--accent)}
   body.classic .svglib-hint{font-family:'Outfit',sans-serif;font-size:12px}
   body.classic .svglib-item{border-width:1px;border-radius:8px;box-shadow:none;overflow:hidden}
+  body.classic .svglib-del{border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);font-family:'Outfit',sans-serif;font-size:14px;line-height:19px}
+  body.classic .svglib-del.restore{background:var(--accent);color:#fff}
+  body.classic .svglib-cell:hover .svglib-del{transform:none}
+  body.classic .svglib-del:hover{background:#a33}
+  body.classic .svglib-del.restore:hover{background:var(--accent-2)}
+  body.classic #svglib-undo{font-family:'Outfit',sans-serif;font-size:12px}
   body.classic .svglib-item:hover{transform:none;background:rgba(184,96,42,.06)}
   body.classic .svglib-thumb{border-bottom-width:1px}
   body.classic .svglib-name{font-family:'Outfit',sans-serif}
@@ -652,9 +671,9 @@
   <div class="modal-box" onclick="event.stopPropagation()">
     <h2>Hoe werkt One Line Color?</h2>
     <p>
-      <strong>1. Kies of upload een SVG</strong> — Kies een afbeelding uit de ingebouwde <strong>Bibliotheek</strong>, of sleep/kies een eigen SVG per dia. Meerdere paden worden herkend.<br><br>
+      <strong>1. Kies of upload een SVG</strong> — Kies een afbeelding uit de ingebouwde <strong>Bibliotheek</strong>, of sleep/kies een eigen SVG per dia. Meerdere paden worden herkend. Met <strong>×</strong> haal je een afbeelding uit de bibliotheek; via <strong>↺ Verwijderde</strong> zet je hem terug.<br><br>
       <strong>2. Kleuren instellen</strong> — Achtergrondkleur, lijnkleur per pad, ondertitel- en tekstkleuren. Maak paden transparant (onzichtbaar tekenen) via het pad-paneel.<br><br>
-      <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekst blokken, afbeeldingen en video's (ook YouTube). Alles vrij positioneerbaar en schaalbaar.<br><br>
+      <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekst blokken, afbeeldingen en video's (ook YouTube). Alles vrij positioneerbaar en schaalbaar. Bij <em>Tekst als pad</em> krijgen cijfers vanzelf een mini-spatie, en meerdere tekstpaden op een dia schrijft de pen snel na elkaar, zonder zichtbare lijn ertussen.<br><br>
       <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Media verschijnt na het tekenen.<br><br>
       <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>PgDn</kbd> <kbd>Klik</kbd> — Volgende &nbsp;
       <kbd>←</kbd> <kbd>PgUp</kbd> — Vorige &nbsp;
@@ -668,11 +687,15 @@
 
 <div class="modal-bg" id="svglib-modal" onclick="this.classList.remove('visible')">
   <div class="modal-box svglib" onclick="event.stopPropagation()">
-    <h2>Bibliotheek</h2>
-    <p class="svglib-hint">Kies een ingebouwde one-line-art afbeelding voor deze dia. Werkt op elke computer — geen losse bestanden nodig.</p>
+    <h2 id="svglib-title">Bibliotheek</h2>
+    <p class="svglib-hint" id="svglib-hint"></p>
     <div id="svglib-grid"></div>
-    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible');pickSvgFile()">⤓ Eigen SVG…</button>
-    <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible')">Sluiten</button>
+    <div id="svglib-undo"></div>
+    <div class="svglib-actions">
+      <button class="t-btn" id="svglib-own-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible');pickSvgFile()">⤓ Eigen SVG…</button>
+      <button class="t-btn" id="svglib-hidden-btn" onclick="toggleSvgLibraryHidden()"></button>
+      <button class="t-btn" onclick="document.getElementById('svglib-modal').classList.remove('visible')">Sluiten</button>
+    </div>
   </div>
 </div>
 
@@ -2388,6 +2411,7 @@ function sampleSVGToPoints(svgText, totalPts, opts){
   const paths=svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect');
   const allPoints=[];
   const pathStrokes=[];
+  const pathInvisible=[]; // per pad: onzichtbare verbinding (data-invisible)?
   let usedFast=true;
   let pathIdx=0;
   // Count visible paths so invisible ones don't eat into the point budget
@@ -2411,11 +2435,15 @@ function sampleSVGToPoints(svgText, totalPts, opts){
     const stroke=el.getAttribute('stroke')||el.style.stroke||'';
     const invisible=el.getAttribute('data-invisible')==='true';
     pathStrokes.push(stroke);
+    pathInvisible.push(invisible);
     if(el.tagName==='path'){
       const d=el.getAttribute('d').replace(/[Zz]/g,'');
       // Invisible paths: sample minimally (just 2 points for position), don't consume animation budget
       const ptsPerPath=invisible?2:lenShare?Math.max(4,Math.round(totalPts*lenShare[elIdx])):(Math.round(totalPts/visiblePathCount)||totalPts);
-      const pts=fastSamplePath(d,ptsPerPath);
+      let pts=fastSamplePath(d,ptsPerPath);
+      // fastSamplePath geeft elk Bézier-stuk minstens 3 punten; een onzichtbare
+      // verbinding houdt alleen begin en eind, zodat de pen er meteen overheen springt
+      if(pts&&invisible&&pts.length>2)pts=[pts[0],pts[pts.length-1]];
       if(pts){pts.forEach(p=>{p.pathIdx=pathIdx;if(invisible)p.invisible=true;});allPoints.push(...pts);pathIdx++;return;}
       usedFast=false;
     } else {usedFast=false;}
@@ -2427,9 +2455,9 @@ function sampleSVGToPoints(svgText, totalPts, opts){
     const domPts=domSampleSVG(svgText,density,100,Math.min(totalPts,800));
     // DOM fallback: all points get pathIdx 0
     domPts.forEach(p=>{p.pathIdx=0;});
-    return{points:domPts,pathCount:1,pathStrokes:pathStrokes};
+    return{points:domPts,pathCount:1,pathStrokes:pathStrokes,pathInvisible:[false]};
   }
-  return{points:allPoints,pathCount:pathIdx,pathStrokes:pathStrokes};
+  return{points:allPoints,pathCount:pathIdx,pathStrokes:pathStrokes,pathInvisible:pathInvisible};
 }
 
 function processSVGUpload(svgText){
@@ -2442,10 +2470,13 @@ function processSVGUpload(svgText){
     let d='';allPoints.forEach((p,i)=>{d+=(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1)+' ';});
     // Initialize pathColors from SVG stroke colors or defaults
     const lineColor=slides[currentSlide].lineColor||'#1a1a1a';
+    // Paden met data-invisible="true" (bijv. in tekeningen uit de bibliotheek)
+    // zijn onzichtbare verbindingen: de pen gaat daar zonder te tekenen naar
+    // een los deel, zoals een zwevend blaadje.
     const pathColors=Array.from({length:result.pathCount},(_,i)=>{
       const origStroke=result.pathStrokes[i];
       const color=(origStroke&&origStroke!=='none'&&origStroke!=='')?origStroke:lineColor;
-      return{color:color,visible:true};
+      return{color:color,visible:!(result.pathInvisible&&result.pathInvisible[i])};
     });
     return{sampledPath:d.trim(),originalSVG:svgText,pathCount:result.pathCount,pathColors:pathColors};
   }catch(err){alert('Fout: '+err.message);return null;}
@@ -3047,22 +3078,34 @@ function startAnchorDrag(e,mbIdx,side,pointIdx,scaleX,scaleY){
   document.addEventListener('mouseup',onUp);
 }
 
+// Ruimte tussen twee cijfers (fontcoördinaten; een spatie is 80 breed). De
+// cijfers worden daar verbonden met een kort onzichtbaar lijntje: de pen gaat
+// even omhoog, zodat een getal als 2026 uit losse cijfers bestaat in plaats
+// van in elkaar over te lopen.
+const ONE_LINE_DIGIT_GAP=34;
 function composeOneLineText(text, letterColors){
   const SPACE_W=60;
   const paths=[];let cursorX=0;let totalW=0;let isFirst=true;
   let letterIdx=0;
   let maxSvgHeight=200;
+  let prevDigit=false,prevFinishY=0;
   for(const ch of text){
-    if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;continue;}
+    if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;prevDigit=false;continue;}
     const g=oneLineGlyph(ch);
     if(!g){letterIdx++;continue;}
     if(g.svgHeight>maxSvgHeight)maxSvgHeight=g.svgHeight;
+    const isDigit=/^[0-9]$/.test(ch);
     let dx=0;
     if(isFirst){
       dx=-g.startX;
       cursorX=dx;
       isFirst=false;
     }else{
+      if(isDigit&&prevDigit){
+        const x2=cursorX+ONE_LINE_DIGIT_GAP;
+        paths.push({d:`M${cursorX.toFixed(2)},${prevFinishY.toFixed(2)}L${x2.toFixed(2)},${g.startY.toFixed(2)}`,color:'none',idx:letterIdx,visible:false});
+        cursorX=x2;
+      }
       dx=cursorX-g.startX;
     }
     const color=(letterColors&&letterColors[letterIdx])||'#1a1a1a';
@@ -3078,6 +3121,7 @@ function composeOneLineText(text, letterColors){
     }
     cursorX=dx+g.finishX;
     totalW=Math.max(totalW,dx+g.width);
+    prevDigit=isDigit;prevFinishY=g.finishY;
     letterIdx++;
   }
   // Onzichtbare verbindingen aan begin en eind weglaten (bijv. na een punt of
@@ -3208,22 +3252,82 @@ function handleSVGFile(file){
 function pickSvgFile(){document.getElementById('svg-file-input').click();}
 
 // ── Ingebouwde SVG-bibliotheek ──
+// Afbeeldingen verwijderen uit de bibliotheek: de ingebouwde bestanden zelf
+// kunnen niet weg (in de geïnstalleerde app zitten ze alleen-lezen in het
+// app-pakket), dus onthouden we per computer welke afbeeldingen verborgen zijn
+// (localStorage; de desktop-app heeft daarvoor een vaste origin, zie main.js).
+// Verwijderde afbeeldingen zijn terug te zetten via de knop "Verwijderde".
+const SVGLIB_HIDDEN_KEY='one-line-prezi-svglib-hidden';
+let svgLibShowHidden=false,svgLibUndo=null;
+function getHiddenLibraryFiles(){
+  try{const v=JSON.parse(localStorage.getItem(SVGLIB_HIDDEN_KEY));return Array.isArray(v)?v:[];}catch(e){return[];}
+}
+function setHiddenLibraryFiles(files){
+  try{localStorage.setItem(SVGLIB_HIDDEN_KEY,JSON.stringify(files));}catch(e){}
+}
 function openSvgLibrary(){
+  svgLibShowHidden=false;svgLibUndo=null;
+  renderSvgLibrary();
+  document.getElementById('svglib-modal').classList.add('visible');
+}
+function renderSvgLibrary(){
   const grid=document.getElementById('svglib-grid');
   const lib=window.SVG_LIBRARY||[];
-  if(!grid.dataset.loaded){
-    grid.innerHTML = lib.length
-      ? lib.map((it,i)=>`<button class="svglib-item" onclick="chooseLibrarySVG(${i})" title="${escHTML(it.name)}"><span class="svglib-thumb"><img src="assets/svglibrary/${encodeURIComponent(it.file)}" alt="" loading="lazy"></span><span class="svglib-name">${escHTML(it.name)}</span></button>`).join('')
-      : '<div class="svglib-empty">Geen afbeeldingen in de bibliotheek.</div>';
-    grid.dataset.loaded='1';
-  }
-  document.getElementById('svglib-modal').classList.add('visible');
+  const hidden=new Set(getHiddenLibraryFiles());
+  const hiddenCount=lib.filter(it=>hidden.has(it.file)).length;
+  if(!hiddenCount)svgLibShowHidden=false;
+  const shown=lib.map((it,i)=>({it,i})).filter(({it})=>hidden.has(it.file)===svgLibShowHidden);
+  grid.innerHTML = shown.length
+    ? shown.map(({it,i})=>{
+        const name=escHTML(it.name);
+        const thumb=`<span class="svglib-thumb"><img src="assets/svglibrary/${encodeURIComponent(it.file)}" alt="" loading="lazy"></span><span class="svglib-name">${name}</span>`;
+        return svgLibShowHidden
+          ? `<div class="svglib-cell hidden-item"><button class="svglib-item" onclick="restoreLibrarySVG(${i})" title="${name} terugzetten">${thumb}</button><button class="svglib-del restore" onclick="restoreLibrarySVG(${i})" title="${name} terugzetten in de bibliotheek" aria-label="${name} terugzetten">↺</button></div>`
+          : `<div class="svglib-cell"><button class="svglib-item" onclick="chooseLibrarySVG(${i})" title="${name}">${thumb}</button><button class="svglib-del" onclick="hideLibrarySVG(${i})" title="${name} uit de bibliotheek verwijderen" aria-label="${name} verwijderen">×</button></div>`;
+      }).join('')
+    : `<div class="svglib-empty">${lib.length?'Alle afbeeldingen zijn verwijderd. Zet ze terug via “Verwijderde”.':'Geen afbeeldingen in de bibliotheek.'}</div>`;
+  document.getElementById('svglib-title').textContent=svgLibShowHidden?'Verwijderde afbeeldingen':'Bibliotheek';
+  document.getElementById('svglib-hint').textContent=svgLibShowHidden
+    ?'Klik op een afbeelding (of ↺) om die terug te zetten in de bibliotheek.'
+    :'Kies een ingebouwde one-line-art afbeelding voor deze dia. Werkt op elke computer — geen losse bestanden nodig. Met × verwijder je een afbeelding uit de bibliotheek.';
+  document.getElementById('svglib-hidden-btn').textContent=svgLibShowHidden?'← Terug naar bibliotheek':(hiddenCount?`↺ Verwijderde (${hiddenCount})`:'');
+  document.getElementById('svglib-own-btn').style.display=svgLibShowHidden?'none':'';
+  const undo=document.getElementById('svglib-undo');
+  if(svgLibUndo&&!svgLibShowHidden){
+    undo.innerHTML=`“${escHTML(svgLibUndo.name)}” is uit de bibliotheek verwijderd.<button onclick="undoHideLibrarySVG()">Ongedaan maken</button>`;
+  }else undo.innerHTML='';
 }
 function chooseLibrarySVG(i){
   const it=(window.SVG_LIBRARY||[])[i];
   if(!it)return;
   applySVGToSlide(it.svg);
   document.getElementById('svglib-modal').classList.remove('visible');
+}
+function hideLibrarySVG(i){
+  const it=(window.SVG_LIBRARY||[])[i];
+  if(!it)return;
+  const hidden=getHiddenLibraryFiles();
+  if(!hidden.includes(it.file))hidden.push(it.file);
+  setHiddenLibraryFiles(hidden);
+  svgLibUndo={file:it.file,name:it.name};
+  renderSvgLibrary();
+}
+function undoHideLibrarySVG(){
+  if(!svgLibUndo)return;
+  const file=svgLibUndo.file;
+  setHiddenLibraryFiles(getHiddenLibraryFiles().filter(f=>f!==file));
+  svgLibUndo=null;
+  renderSvgLibrary();
+}
+function restoreLibrarySVG(i){
+  const it=(window.SVG_LIBRARY||[])[i];
+  if(!it)return;
+  setHiddenLibraryFiles(getHiddenLibraryFiles().filter(f=>f!==it.file));
+  renderSvgLibrary();
+}
+function toggleSvgLibraryHidden(){
+  svgLibShowHidden=!svgLibShowHidden;svgLibUndo=null;
+  renderSvgLibrary();
 }
 function clearCurrentArt(){slides[currentSlide].svgPath='';slides[currentSlide].originalSVG='';slides[currentSlide].pathLength=0;slides[currentSlide].pathCount=0;slides[currentSlide].pathColors=[];renderPreview();updateSlideList();renderPathColorsPanel();}
 
@@ -3429,16 +3533,23 @@ function artFitTransform(originalSVG){
 // naartoe (zelfde Bézier als tussen dia's), met evenveel punten per pixel als
 // het element zelf. Zo tekent de verbinding op tekensnelheid door in plaats
 // van in één frame als rechte streep over de dia te verschijnen.
-function appendWithConnector(allPts,groupPts){
+// penUp (van tekstpad naar tekstpad): de verbinding is onzichtbaar en krijgt
+// maar een fractie van die punten, zodat de pen snel naar het volgende pad
+// gaat en er weinig tijd zit tussen het schrijven van het ene en het andere.
+const PEN_UP_SPEEDUP=0.12;
+function appendWithConnector(allPts,groupPts,penUp){
   if(!groupPts.length)return;
   const last=allPts[allPts.length-1],first=groupPts[0];
   if(last&&last.visible!==false&&first.visible!==false){
     const dist=Math.hypot(first.x-last.x,first.y-last.y);
     if(dist>3){
-      const n=Math.max(8,Math.min(400,Math.round(dist*pointDensity(groupPts))));
+      const density=pointDensity(groupPts);
+      const n=penUp
+        ?Math.max(4,Math.min(30,Math.round(dist*density*PEN_UP_SPEEDUP)))
+        :Math.max(8,Math.min(400,Math.round(dist*density)));
       const conn=generateConnectionPoints(allPts,groupPts,n);
       conn.pop(); // laatste punt valt samen met het begin van het element
-      for(const p of conn)allPts.push(p);
+      for(const p of conn){if(penUp)p.visible=false;allPts.push(p);}
     }
   }
   for(const p of groupPts)allPts.push(p);
@@ -3462,7 +3573,11 @@ function sampleAllSlides(){
     if(s.originalSVG||s.svgPath){
       let rawPts;
       if(s.originalSVG){
-        const result=sampleSVGToPoints(s.originalSVG,3000);
+        // Een tekening met onzichtbare verbindingen bestaat uit zichtbare stukken
+        // van heel verschillende lengte (de hele boom, dan een blaadje): verdeel
+        // de punten dan naar lengte, zodat de pen een gelijkmatig tempo houdt.
+        const hasAir=/data-invisible\s*=\s*["']true["']/.test(s.originalSVG);
+        const result=sampleSVGToPoints(s.originalSVG,3000,hasAir?{byLength:true}:undefined);
         rawPts=result.points;
         if(rawPts.length>1){const first=rawPts[0],last=rawPts[rawPts.length-1];let mnX=Infinity,mxX=-Infinity;for(const p of rawPts){if(p.x<mnX)mnX=p.x;if(p.x>mxX)mxX=p.x;}const w=mxX-mnX;if(w>0&&(first.x-last.x)>w*0.3)rawPts.reverse();}
       } else {
@@ -3480,12 +3595,13 @@ function sampleAllSlides(){
       rawPts.forEach(p=>{
         const pathInfo=s.pathColors&&s.pathColors[p.pathIdx];
         const color=pathInfo?pathInfo.color:(s.lineColor||'#1a1a1a');
-        const visible=pathInfo?pathInfo.visible:true;
+        const visible=pathInfo?pathInfo.visible:!p.invisible;
         allPts.push({x:(p.x*fit.sc+fit.ox)*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:(p.y*fit.sc+fit.oy)*pViewport.scale+pViewport.padY,color:color,visible:visible});
       });
     }
     // Sample svgtext media blocks
     if(s.mediaBlocks){
+      let prevWasText=false; // volgt dit tekstpad op een ander tekstpad?
       s.mediaBlocks.forEach(mb=>{
         if(mb.type!=='svgtext')return;
         const blockPts=[];
@@ -3547,22 +3663,30 @@ function sampleAllSlides(){
         }
         // Text points — resample visible points to textBudget, keep invisible as gap markers
         const textStep=Math.max(1,Math.floor(visTextPts.length/textBudget));
-        let visIdx=0;
+        const pushVisible=p=>{
+          let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
+          if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
+          const color=pathColors[p.pathIdx]||'#1a1a1a';
+          blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
+        };
+        let visIdx=0,skipped=null,afterGap=false;
         for(let ti=0;ti<result.points.length;ti++){
           const p=result.points[ti];
           if(p.invisible){
+            // Het laatste zichtbare punt vóór een onderbreking (spatie, cijfer,
+            // punt op de i) altijd meenemen, anders stopt de lijn iets te vroeg.
+            if(skipped){pushVisible(skipped);skipped=null;}
             // Always include invisible points as gap markers (moveTo triggers)
             let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
             if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
             blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:'#1a1a1a',visible:false});
+            afterGap=true;
           } else {
-            // Downsample visible points by textStep
-            if(visIdx%textStep===0){
-              let px=(p.x-vbX)*sxMB+mb.x, py=(p.y-vbY)*syMB+mb.y;
-              if(rad!==0){const dx2=px-cx,dy2=py-cy;px=cx+dx2*cosR-dy2*sinR;py=cy+dx2*sinR+dy2*cosR;}
-              const color=pathColors[p.pathIdx]||'#1a1a1a';
-              blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
-            }
+            // Downsample visible points by textStep (het eerste punt na een
+            // onderbreking altijd meenemen, anders begint de lijn te laat)
+            if(afterGap||visIdx%textStep===0){pushVisible(p);skipped=null;}
+            else skipped=p;
+            afterGap=false;
             visIdx++;
           }
         }
@@ -3581,7 +3705,8 @@ function sampleAllSlides(){
             blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:rightSampled.color,visible:true});
           });
         }
-        appendWithConnector(allPts,blockPts);
+        appendWithConnector(allPts,blockPts,prevWasText);
+        prevWasText=true;
       });
     }
     pSlidePoints.push(allPts);
