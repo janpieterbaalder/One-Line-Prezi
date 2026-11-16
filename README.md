@@ -241,6 +241,7 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 | `←` / `PgUp` / vegen | Vorige dia (de lijn tekent zich opnieuw) |
 | `Home` / `End` | Eerste / laatste dia |
 | `3` `Enter` | Naar dia 3 |
+| `→` op een dia met video | Eerst de video starten, daarna volgende dia |
 | `K` / klik op de video | Video of YouTube afspelen / pauzeren |
 | `B` / `W` | Zwart / wit scherm (nogmaals = terug) |
 | `F` / `F11` | Volledig scherm |
@@ -249,9 +250,12 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 Na de laatste dia volgt een eindscherm; pas de volgende klik sluit de
 presentatie. Ook de geëxporteerde HTML werkt zo (daar begint hij dan opnieuw).
 
-**Video en YouTube** — De pijltjes en spatie bedienen altijd de dia's, ook als
-je in een YouTube-video hebt geklikt (de app haalt het toetsenbord dan meteen
-terug). Bij een volgende dia pauzeert de video. Bij YouTube kun je een
+**Video en YouTube** — Staat er een video op de dia, dan start *volgende*
+(→, spatie, klik of de ▶-knop) eerst de video; nog een keer *volgende* gaat
+naar de volgende dia, ook als de video nog loopt (die pauzeert dan).
+YouTube-video's worden alvast geladen zodra de dia in beeld staat, zodat ze
+direct starten. De pijltjes en spatie bedienen altijd de dia's, ook als je in
+een YouTube-video hebt geklikt (de app haalt het toetsenbord dan meteen terug). Bij YouTube kun je een
 starttijd instellen (of een link met `?t=90` plakken). YouTube kan reclame
 tonen en dat kan geen enkele website uitzetten; wil je zeker geen reclame,
 voeg dan een eigen videobestand toe (*Toevoegen → Video*). Daarbij kies je zelf
