@@ -172,13 +172,17 @@
   #present-subtitle.visible{opacity:1}
   #present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;z-index:101;pointer-events:none}
   #present-title.visible{opacity:1}
-  .present-textblock{position:absolute;opacity:0;z-index:101;pointer-events:none;white-space:pre-wrap;max-width:60%;padding:4px 8px}
+  .present-textblock{position:absolute;opacity:0;z-index:101;pointer-events:none;white-space:pre-wrap;width:max-content}
   .present-textblock.visible{opacity:1}
 
-  /* Text block editor */
-  .tb-overlay{position:absolute;cursor:move;padding:4px 8px;border:2px dashed transparent;border-radius:0;min-width:40px;min-height:20px;user-select:none;transition:border-color .15s,box-shadow .15s}
-  .tb-overlay:hover{border-color:var(--accent)}
-  .tb-overlay.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,94,184,.25)}
+  /* Text block editor
+     De opvulling (padding) wordt per blok meegeschaald met de dia (zie
+     renderTextBlocks) en de rand is een outline: zo breekt tekst in de editor
+     op precies dezelfde plek af als in de presentatie. */
+  .tb-overlay{position:absolute;cursor:move;outline:2px dashed transparent;outline-offset:0;border-radius:0;min-width:40px;min-height:20px;user-select:none;transition:outline-color .15s,box-shadow .15s}
+  .tb-overlay::before{content:'';position:absolute;inset:-6px;z-index:-1}
+  .tb-overlay:hover{outline-color:var(--accent)}
+  .tb-overlay.selected{outline-color:var(--accent);box-shadow:0 0 0 3px rgba(255,94,184,.25)}
   .tb-overlay .tb-text{outline:none;white-space:pre-wrap;min-width:30px;min-height:16px;cursor:text}
   .tb-overlay .tb-delete{position:absolute;bottom:-28px;left:calc(50% + 16px);width:20px;height:20px;background:var(--danger);color:#fff;border:2px solid var(--border);border-radius:0;font-size:11px;line-height:14px;text-align:center;cursor:pointer;opacity:1;z-index:3;box-shadow:var(--hard-shadow-sm);padding:0;font-family:var(--font-ui)}
   .tb-overlay .tb-delete:hover{background:#D02A6A}
@@ -526,7 +530,7 @@
   body.classic .svglib-name{font-family:'Outfit',sans-serif}
   body.classic .yt-dialog-box input{border-width:1px;border-radius:6px;box-shadow:none;font-family:'Outfit',sans-serif;font-size:13px;padding:10px 14px}
   body.classic .yt-dialog-box input:focus{box-shadow:none;border-color:var(--accent)}
-  body.classic .tb-overlay{border-width:1.5px;border-radius:4px}
+  body.classic .tb-overlay{outline-width:1.5px;border-radius:4px}
   body.classic .tb-overlay.selected{box-shadow:0 0 0 2px rgba(184,96,42,.15)}
   body.classic .tb-overlay .tb-delete{border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.2);font-family:'Outfit',sans-serif;width:18px;height:18px;background:#c44}
   body.classic .tb-overlay .tb-rotate{border:2px solid #fff;border-radius:50%;background:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.2);width:18px;height:18px}
@@ -817,6 +821,9 @@ window._drawnPoints=[];
 
 function escHTML(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 const YT_ID_RE=/^[A-Za-z0-9_-]{11}$/;
+// Opvulling rond een tekstblok, in dia-pixels (1920×1080). Editor en
+// presentatie schalen dit allebei mee, zodat tekst overal gelijk afbreekt.
+const TB_PAD_X=8,TB_PAD_Y=4;
 
 // Determine if a color is light or dark for contrast
 function isLightColor(hex){
@@ -856,12 +863,21 @@ function placePresentOverlay(el){
   if(g.kind==='title'){
     el.style.left=(cl+cssW/2)+'px';el.style.top=(ct+cssH*0.03)+'px';
     el.style.fontSize=Math.max(10,cssH*0.012)+'px';
+    el.style.maxWidth=(cssW*0.9)+'px';
   }else if(g.kind==='subtitle'){
     el.style.left=(cl+cssW/2)+'px';el.style.top=(ct+cssH*0.82)+'px';
     el.style.fontSize=Math.max(16,g.size*scaleY)+'px';
+    // Gecentreerd: zonder vaste maximumbreedte zou hij al op de halve schermbreedte afbreken
+    el.style.maxWidth=(cssW*0.94)+'px';
+    el.style.padding=`${TB_PAD_Y*scaleY}px ${TB_PAD_X*scaleX}px`;
   }else if(g.kind==='text'){
     el.style.left=(cl+g.x*scaleX)+'px';el.style.top=(ct+g.y*scaleY)+'px';
     el.style.fontSize=Math.max(10,g.size*scaleX)+'px';
+    // Precies zoals in de editor: opvulling meegeschaald en breed tot de
+    // rechterrand van de dia (+1 px marge voor afronding), zodat de tekst op
+    // dezelfde plek afbreekt.
+    el.style.padding=`${TB_PAD_Y*scaleY}px ${TB_PAD_X*scaleX}px`;
+    el.style.maxWidth=(Math.max(40,(1920-g.x)*scaleX)+1)+'px';
   }else if(g.kind==='media'){
     el.style.left=(cl+g.x*scaleX)+'px';el.style.top=(ct+g.y*scaleY)+'px';
     el.style.width=(g.w*scaleX)+'px';el.style.height=(g.h*scaleY)+'px';
@@ -1745,6 +1761,7 @@ function renderTextBlocks(){
     el.style.left=(tb.x*scaleX)+'px';
     el.style.top=(tb.y*scaleY)+'px';
     el.style.zIndex=tb.zOrder||0;
+    el.style.padding=`${TB_PAD_Y*scaleY}px ${TB_PAD_X*scaleX}px`;
     el.style.fontFamily=`'${tb.font}', serif`;
     el.style.fontSize=(tb.size*scaleX)+'px';
     el.style.fontWeight=tb.bold?'700':'400';
@@ -3944,10 +3961,32 @@ function thumbArtSVG(s){
   if(s.svgPath)return`<path d="${escHTML(s.svgPath)}" fill="none" stroke="${escHTML(s.lineColor||'#1a1a1a')}" stroke-width="6" stroke-linecap="round"/>`;
   return'';
 }
-function thumbTextSVG(text,x,y,size,font,bold,italic,color,align,rotation,anchorCenter){
-  const lines=String(text||'').split('\n');
+// Tekst over regels verdelen zoals de browser dat doet (op spaties), gemeten
+// met het echte lettertype, zodat de miniatuur op dezelfde plek afbreekt.
+const _measureCtx=document.createElement('canvas').getContext('2d');
+function measureTextWidth(t,font,size,bold,italic){
+  _measureCtx.font=`${italic?'italic ':''}${bold?700:400} ${size}px '${font}', serif`;
+  return _measureCtx.measureText(t).width;
+}
+function wrapTextLines(text,font,size,bold,italic,maxW){
+  const out=[];
+  String(text||'').split('\n').forEach(par=>{
+    let line='';
+    for(const w of par.split(/(\s+)/)){
+      if(!w)continue;
+      const test=line+w;
+      if(line.trim()&&w.trim()&&maxW>0&&measureTextWidth(test.replace(/\s+$/,''),font,size,bold,italic)>maxW){
+        out.push(line.replace(/\s+$/,''));line=w;
+      }else line=test;
+    }
+    out.push(line);
+  });
+  return out;
+}
+function thumbTextSVG(text,x,y,size,font,bold,italic,color,align,rotation,anchorCenter,maxW){
+  const lines=wrapTextLines(text,font,size,bold,italic,maxW||0);
   const lh=size*1.2;
-  const estW=Math.max(...lines.map(l=>l.length))*size*0.48;
+  const estW=Math.max(0,...lines.map(l=>measureTextWidth(l,font,size,bold,italic)));
   let ax=x,anchor='start';
   if(anchorCenter){anchor='middle';}
   else if(align==='center'){ax=x+estW/2;anchor='middle';}
@@ -3991,10 +4030,10 @@ function slideThumbSVG(s){
   // Tekst als pad wordt in de presentatie op het canvas getekend: onder de rest
   (s.mediaBlocks||[]).filter(mb=>mb.type==='svgtext').forEach(mb=>parts.push(thumbMediaSVG(mb)));
   getLayerItems(s).forEach(it=>{
-    if(it.kind==='tb'){const tb=it.item;parts.push(thumbTextSVG(tb.text,tb.x+8,tb.y+4,tb.size||80,tb.font||'Cormorant Garamond',tb.bold,tb.italic,tb.color,tb.align,tb.rotation,false));}
+    if(it.kind==='tb'){const tb=it.item;parts.push(thumbTextSVG(tb.text,tb.x+TB_PAD_X,tb.y+TB_PAD_Y,tb.size||80,tb.font||'Cormorant Garamond',tb.bold,tb.italic,tb.color,tb.align,tb.rotation,false,(1920-tb.x)-2*TB_PAD_X));}
     else if(it.item.type!=='svgtext')parts.push(thumbMediaSVG(it.item));
   });
-  if(s.subtitle&&s.subtitle.trim())parts.push(thumbTextSVG(s.subtitle,960,1080*0.82+4,s.subSize||80,s.subFont||'Cormorant Garamond',s.subBold,s.subItalic,s.subColor,'center',0,true));
+  if(s.subtitle&&s.subtitle.trim())parts.push(thumbTextSVG(s.subtitle,960,1080*0.82+TB_PAD_Y,s.subSize||80,s.subFont||'Cormorant Garamond',s.subBold,s.subItalic,s.subColor,'center',0,true,1920*0.94-2*TB_PAD_X));
   return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="384" height="216">${parts.join('')}</svg>`;
 }
 function scheduleThumbs(){clearTimeout(thumbTimer);thumbTimer=setTimeout(refreshThumbs,250);}
@@ -4831,7 +4870,7 @@ body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfi
 #present-subtitle.visible{opacity:1}
 #present-title{position:absolute;font-family:'Outfit',sans-serif;font-size:12px;font-weight:300;color:#ccc;letter-spacing:2px;text-transform:uppercase;opacity:0;z-index:101;pointer-events:none}
 #present-title.visible{opacity:1}
-.present-textblock{position:absolute;opacity:0;z-index:101;pointer-events:none;white-space:pre-wrap;max-width:60%;padding:4px 8px}
+.present-textblock{position:absolute;opacity:0;z-index:101;pointer-events:none;white-space:pre-wrap;width:max-content}
 .present-textblock.visible{opacity:1}
 .present-media{position:absolute;opacity:0;z-index:101;pointer-events:none}
 .present-media.visible{opacity:1}
