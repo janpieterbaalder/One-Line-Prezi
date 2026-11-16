@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, shell } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -104,7 +104,18 @@ async function createWindow() {
     if (choice === 0) event.preventDefault(); // preventDefault = beforeunload negeren en sluiten
   });
 
-  win.loadURL(`http://127.0.0.1:${port}/index.html`);
+  // Links naar buiten (bijv. "Open op YouTube") openen in de gewone browser in
+  // plaats van in een kaal app-venster; de app zelf navigeert nooit weg.
+  const appOrigin = `http://127.0.0.1:${port}/`;
+  const openExternal = (url) => { if (/^https?:\/\//i.test(url)) shell.openExternal(url); };
+  win.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith(appOrigin)) return;
+    event.preventDefault();
+    openExternal(url);
+  });
+
+  win.loadURL(`${appOrigin}index.html`);
 }
 
 app.whenReady().then(createWindow);
