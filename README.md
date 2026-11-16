@@ -238,15 +238,24 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 |:---:|:---|
 | `F5` / `Shift+F5` | Presenteren vanaf het begin / vanaf deze dia |
 | `→` / `Spatie` / `PgDn` / `Klik` / vegen | Volgende dia |
-| `←` / `PgUp` / vegen | Vorige dia |
+| `←` / `PgUp` / vegen | Vorige dia (de lijn tekent zich opnieuw) |
 | `Home` / `End` | Eerste / laatste dia |
 | `3` `Enter` | Naar dia 3 |
+| `K` / klik op de video | Video of YouTube afspelen / pauzeren |
 | `B` / `W` | Zwart / wit scherm (nogmaals = terug) |
 | `F` / `F11` | Volledig scherm |
 | `Esc` | Stop presentatie |
 
 Na de laatste dia volgt een eindscherm; pas de volgende klik sluit de
 presentatie. Ook de geëxporteerde HTML werkt zo (daar begint hij dan opnieuw).
+
+**Video en YouTube** — De pijltjes en spatie bedienen altijd de dia's, ook als
+je in een YouTube-video hebt geklikt (de app haalt het toetsenbord dan meteen
+terug). Bij een volgende dia pauzeert de video. Bij YouTube kun je een
+starttijd instellen (of een link met `?t=90` plakken). YouTube kan reclame
+tonen en dat kan geen enkele website uitzetten; wil je zeker geen reclame,
+voeg dan een eigen videobestand toe (*Toevoegen → Video*). Daarbij kies je zelf
+*Auto start*, *Geluid* en *Herhalen*, en de video gaat mee in de HTML-export.
 
 **Bestand**
 
@@ -280,9 +289,10 @@ Met de **+** links en rechts van een tekstpad teken je een lijn die vanaf de
 rand van de dia in de tekst overloopt. Waar een letter vloeiend kan
 aansluiten, volgt de lijn de richting van de letter. Begint of eindigt een
 teken met een neergaande of terugkerende haal (zoals `r`, `e`, `A`, `M`, `N`,
-`8`) of met een onzichtbare verbinding (leestekens zoals `( " ! ?`), dan sluit
-de lijn aan zoals letters in een woord op elkaar aansluiten: op de schrijflijn,
-schuin omhoog naar rechts.
+`8`), dan sluit de lijn aan zoals letters in een woord op elkaar aansluiten:
+schuin omhoog naar rechts. Bij leestekens zit de lijn vast aan het teken zelf
+(bijv. de punt van een `?`, `!` of `.`) en loopt hij richting de schrijflijn weg.
+De `?` en `!` staan los van het woord ervoor.
 
 ---
 
