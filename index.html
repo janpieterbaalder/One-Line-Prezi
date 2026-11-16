@@ -780,7 +780,7 @@
       <strong>Bestand</strong> — <kbd>Ctrl+S</kbd> opslaan (daarna direct in hetzelfde bestand) &nbsp; <kbd>Ctrl+Shift+S</kbd> opslaan als &nbsp; <kbd>Ctrl+O</kbd> openen. Je kunt ook een <em>.json</em>-presentatie op het venster slepen. Wijzigingen worden automatisch bewaard: sluit je zonder op te slaan, dan biedt de app bij de volgende start herstel aan.<br><br>
       <strong>Bewerken</strong> — <kbd>Ctrl+Z</kbd> ongedaan maken &nbsp; <kbd>Ctrl+Y</kbd> opnieuw &nbsp; <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> blok kopiëren en plakken (ook naar een andere dia) &nbsp; <kbd>Ctrl+D</kbd> dupliceren &nbsp; <kbd>Delete</kbd> verwijderen &nbsp; <kbd>pijltjes</kbd> blok verschuiven (met <kbd>Shift</kbd> per 10) &nbsp; <kbd>Esc</kbd> deselecteren &nbsp; <kbd>PgUp</kbd>/<kbd>PgDn</kbd> vorige/volgende dia.<br><br>
       <strong>Presenteren</strong> — <kbd>F5</kbd> vanaf het begin &nbsp; <kbd>Shift+F5</kbd> vanaf deze dia &nbsp; <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> volgende &nbsp; <kbd>←</kbd> vorige (de lijn tekent zich opnieuw) &nbsp; <kbd>Home</kbd>/<kbd>End</kbd> eerste/laatste dia &nbsp; <kbd>3</kbd> <kbd>Enter</kbd> naar dia 3 &nbsp; <kbd>K</kbd> video afspelen/pauzeren &nbsp; <kbd>B</kbd>/<kbd>W</kbd> zwart/wit scherm &nbsp; <kbd>F</kbd> volledig scherm &nbsp; <kbd>Esc</kbd> stoppen. Op een tablet: vegen.<br><br>
-      <strong>Video en YouTube</strong> — De pijltjes bedienen altijd de dia's, ook als een video speelt; afspelen en pauzeren doe je met een klik op de video of <kbd>K</kbd>. Bij YouTube kun je een starttijd instellen. YouTube kan reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, voeg dan een eigen videobestand toe (<em>Toevoegen → Video</em>): daarbij kies je zelf of hij vanzelf start, met geluid speelt en herhaalt, en hij gaat ook mee in de HTML-export.
+      <strong>Video en YouTube</strong> — Staat er een video op de dia, dan start <kbd>→</kbd> (of een klik) eerst de video; nog een keer <kbd>→</kbd> gaat naar de volgende dia, ook als de video nog loopt. YouTube-video's worden alvast geladen zodra de dia in beeld staat. Pauzeren doe je met een klik op de video of <kbd>K</kbd>. Bij YouTube kun je een starttijd instellen. YouTube kan reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, voeg dan een eigen videobestand toe (<em>Toevoegen → Video</em>): daarbij kies je zelf of hij vanzelf start, met geluid speelt en herhaalt, en hij gaat ook mee in de HTML-export.
     </p>
     </div><br>
     <button class="t-btn" onclick="document.getElementById('help-modal').classList.remove('visible')">Sluiten</button>
@@ -971,32 +971,23 @@ function generateConnectionPoints(fromPts,toPts,numPoints,targetSlideIdx){
 }
 
 // Add new slide's overlays offset to the right, keeping old content in place
+// De oude elementen blijven staan (niet verplaatsen: een YouTube-speler zou
+// dan herladen); de nieuwe dia komt in een eigen, verschoven container.
 function addNewSlideOverlays(idx){
-  const tbContainer=document.getElementById('present-textblocks');
-  const mbContainer=document.getElementById('present-media');
-  // Detach old elements into fragments (so showText can clear & recreate)
-  const oldTbFrag=document.createDocumentFragment();
-  while(tbContainer.firstChild)oldTbFrag.appendChild(tbContainer.firstChild);
-  const oldMbFrag=document.createDocumentFragment();
-  while(mbContainer.firstChild)oldMbFrag.appendChild(mbContainer.firstChild);
-  // Render new slide using the SAME functions (identical formatting)
-  showText(idx);
-  // Wrap new elements in offset containers (preserves exact layout, only shifts the container)
-  const newTbWrap=document.createElement('div');
-  newTbWrap.className='p-new-slide';
-  newTbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
-  newTbWrap._g={kind:'shift',strides:1};placePresentOverlay(newTbWrap);
-  while(tbContainer.firstChild)newTbWrap.appendChild(tbContainer.firstChild);
-  tbContainer.appendChild(newTbWrap);
-  const newMbWrap=document.createElement('div');
-  newMbWrap.className='p-new-slide';
-  newMbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
-  newMbWrap._g={kind:'shift',strides:1};placePresentOverlay(newMbWrap);
-  while(mbContainer.firstChild)newMbWrap.appendChild(mbContainer.firstChild);
-  mbContainer.appendChild(newMbWrap);
-  // Re-add old elements at their original positions
-  tbContainer.appendChild(oldTbFrag);
-  mbContainer.appendChild(oldMbFrag);
+  positionTextOverlays();
+  const mk=()=>{
+    const w=document.createElement('div');
+    w.className='p-new-slide';
+    w.style.cssText='position:absolute;inset:0;pointer-events:none';
+    w._g={kind:'shift',strides:1};placePresentOverlay(w);
+    return w;
+  };
+  const newTbWrap=mk(),newMbWrap=mk();
+  // Zelfde functies als altijd (identieke opmaak), alleen in de nieuwe container
+  showPresentTextBlocks(idx,newTbWrap);
+  showPresentMediaBlocks(idx,newMbWrap);
+  document.getElementById('present-textblocks').appendChild(newTbWrap);
+  document.getElementById('present-media').appendChild(newMbWrap);
 }
 // Na de overgang: de oude elementen weghalen en de nieuwe uit hun verschoven
 // container halen. Zonder ze opnieuw aan te maken: een video of YouTube-film
@@ -1016,7 +1007,7 @@ function finalizeSlideOverlays(idx,rerender){
       if(!wrap)return;
       [...c.children].forEach(ch=>{
         if(ch===wrap)return;
-        ch.querySelectorAll&&ch.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
+        pDisposeMedia(ch);
         ch.remove();
       });
       while(wrap.firstChild)c.appendChild(wrap.firstChild);
@@ -1025,6 +1016,8 @@ function finalizeSlideOverlays(idx,rerender){
     positionTextOverlays();
   }
   renderFrame(pTargetScrollX);
+  // De dia staat stil en in beeld: YouTube-spelers alvast laden (niet afspelen)
+  pPrepareSlideMedia();
 }
 
 function applySlideBg(idx){
@@ -1051,6 +1044,8 @@ function pBegin(startIdx){
   try{window.getSelection().removeAllRanges();}catch(e){}
   applySlideBg(pStartIdx);
   pWakeCursor();
+  // Staan er YouTube-video's in de presentatie, laad de speler-code alvast
+  if(location.protocol!=='file:'&&slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube')))ensureYTApi();
   pNext();
 }
 
@@ -1066,6 +1061,10 @@ function pNext(){
     pAnimating=false;
     return;
   }
+  // Staat er op deze dia een video die nog niet is gestart? Dan start
+  // 'volgende' eerst de video; nog een keer 'volgende' gaat naar de volgende dia.
+  const pending=pPendingMedia();
+  if(pending){pStartMedia(pending);return;}
   if(pIdx+1>=slides.length){showEndScreen();return;}
   pPauseMedia();
   pIdx++;
@@ -1150,22 +1149,88 @@ function pGoTo(idx,instant){
 // Video's en YouTube op de dia die je verlaat stoppen (anders loopt het
 // geluid door tijdens de overgang)
 function pPauseMedia(){
-  try{if(_presentPlayer&&_presentPlayer.pauseVideo)_presentPlayer.pauseVideo();}catch(e){}
+  pMediaEls(true).forEach(el=>{
+    if(el._ytPlayer&&el._ytPlayer.pauseVideo){try{el._ytPlayer.pauseVideo();}catch(e){}}
+    el._ytWantPlay=false;
+  });
   document.querySelectorAll('#present-media video').forEach(v=>{try{v.pause();}catch(e){}});
+}
+// Video-elementen (eigen video of YouTube); all=false: alleen van de huidige
+// dia (niet die in de verschoven container van een dia die binnenkomt)
+function pMediaEls(all){
+  return[...document.querySelectorAll('#present-media .present-media[data-kind]')]
+    .filter(el=>all||!el.closest('.p-new-slide'));
+}
+// Een video op deze dia die nog niet is gestart (YouTube niet vanaf file://:
+// daar opent hij in een nieuw tabblad, dat willen we niet met een pijltje)
+function pPendingMedia(){
+  return pMediaEls().find(el=>!el.dataset.started&&!el.dataset.failed&&
+    (el.dataset.kind==='video'||(el.dataset.kind==='youtube'&&location.protocol!=='file:')))||null;
+}
+function pStartMedia(el){
+  if(!el)return;
+  el.dataset.started='1';
+  if(el.dataset.kind==='video'){const v=el.querySelector('video');if(v)pPlayVideo(v);return;}
+  if(el.dataset.kind!=='youtube')return;
+  const id=el.dataset.yt,start=parseInt(el.dataset.start)||0;
+  // Vanaf file:// (geëxporteerd bestand met dubbelklik geopend) weigert YouTube
+  // insluiten: open de video dan rechtstreeks op YouTube.
+  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id+(start?'&t='+start+'s':''),'_blank');return;}
+  el._ytWantPlay=true;
+  if(el._ytReady&&el._ytPlayer&&el._ytPlayer.playVideo){try{el._ytPlayer.playVideo();}catch(e){}}
+  else pPrepareYouTube(el);
+}
+// YouTube-speler maken op de plek van de voorbeeldafbeelding. Hij laadt
+// alvast (zichtbaar op de dia) maar speelt pas na 'volgende', K of een klik.
+// disablekb: de toetsen bedienen de presentatie, niet de speler.
+function pPrepareYouTube(el){
+  if(el._ytPlayer||location.protocol==='file:')return;
+  const id=el.dataset.yt;if(!YT_ID_RE.test(id||''))return;
+  const start=parseInt(el.dataset.start)||0;
+  el.innerHTML='<div class="yt-player"></div>';
+  const mount=el.firstChild;
+  el._ytPlayer='laden';
+  ensureYTApi().then(()=>{
+    if(!mount.isConnected)return; // intussen naar een andere dia gegaan
+    el._ytPlayer=new YT.Player(mount,{
+      videoId:id,
+      host:'https://www.youtube-nocookie.com',
+      playerVars:{autoplay:0,rel:0,playsinline:1,disablekb:1,iv_load_policy:3,fs:1,start:start,origin:location.origin},
+      events:{
+        onReady:e=>{el._ytReady=true;if(el._ytWantPlay){try{e.target.playVideo();}catch(_){}}},
+        onStateChange:e=>{
+          if(e.data===YT.PlayerState.PLAYING){el.dataset.started='1';el.classList.add('playing');}
+          else if(e.data===YT.PlayerState.PAUSED||e.data===YT.PlayerState.ENDED)el.classList.remove('playing');
+        },
+        onError:()=>{el.dataset.failed='1';el._ytPlayer=null;el.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
+      }
+    });
+  });
+}
+// Op de dia die stilstaat: YouTube-spelers alvast laden
+function pPrepareSlideMedia(){
+  if(location.protocol==='file:')return;
+  pMediaEls().forEach(el=>{if(el.dataset.kind==='youtube')pPrepareYouTube(el);});
+}
+// Speler van een element netjes opruimen
+function pDisposeMedia(root){
+  if(!root||!root.querySelectorAll)return;
+  const els=root.matches&&root.matches('.present-media')?[root]:[...root.querySelectorAll('.present-media')];
+  els.forEach(el=>{
+    if(el._ytPlayer&&el._ytPlayer.destroy){try{el._ytPlayer.destroy();}catch(e){}}
+    el._ytPlayer=null;el._ytReady=false;el._ytWantPlay=false;
+  });
+  root.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
 }
 // Afspelen/pauzeren van de video op de huidige dia (toets K, zoals op YouTube)
 function pToggleMedia(){
-  const vids=[...document.querySelectorAll('#present-media video')];
-  if(_presentPlayer&&_presentPlayer.getPlayerState&&document.querySelector('#present-media .yt-player iframe')){
-    try{
-      const st=_presentPlayer.getPlayerState();
-      if(st===1||st===3)_presentPlayer.pauseVideo();else _presentPlayer.playVideo();
-      return;
-    }catch(e){}
-  }
-  if(vids.length){const v=vids[0];if(v.paused)pPlayVideo(v);else v.pause();return;}
-  const thumb=document.querySelector('#present-media .yt-thumb');
-  if(thumb)thumb.click();
+  const el=pMediaEls()[0];if(!el)return;
+  if(!el.dataset.started&&!el.classList.contains('playing')){pStartMedia(el);return;}
+  if(el.dataset.kind==='video'){const v=el.querySelector('video');if(v){if(v.paused)pPlayVideo(v);else v.pause();}return;}
+  const p=el._ytPlayer;
+  if(p&&el._ytReady&&p.getPlayerState){
+    try{const st=p.getPlayerState();if(st===1||st===3)p.pauseVideo();else p.playVideo();}catch(e){}
+  }else pStartMedia(el);
 }
 // Video met geluid starten; lukt dat niet (beleid van de browser), dan zonder geluid
 function pPlayVideo(v){
@@ -1266,9 +1331,9 @@ function showText(idx){
   showPresentMediaBlocks(idx);
 }
 
-function showPresentTextBlocks(idx){
-  const container=document.getElementById('present-textblocks');
-  container.innerHTML='';
+// container: standaard #present-textblocks (wordt dan eerst leeggemaakt)
+function showPresentTextBlocks(idx,container){
+  if(!container){container=document.getElementById('present-textblocks');container.innerHTML='';}
   const s=slides[idx];
   // Render title as a text block (centered, top area)
   if(s.title){
@@ -1324,9 +1389,9 @@ function showPresentTextBlocks(idx){
   }
 }
 
-function showPresentMediaBlocks(idx){
-  const container=document.getElementById('present-media');
-  container.innerHTML='';
+// container: standaard #present-media (wordt dan eerst leeggemaakt)
+function showPresentMediaBlocks(idx,container){
+  if(!container){stopPresentMediaBlocks();container=document.getElementById('present-media');}
   const s=slides[idx];
   if(!s.mediaBlocks||!s.mediaBlocks.length)return;
   s.mediaBlocks.filter(mb=>mb.type!=='svgtext').forEach(mb=>{
@@ -1340,22 +1405,26 @@ function showPresentMediaBlocks(idx){
     if(mb.type==='image'){
       el.innerHTML=`<img src="${escHTML(mb.src)}" alt="">`;
     } else if(mb.type==='video'){
-      // Eigen video: klik (of K) = afspelen/pauzeren. Oudere presentaties:
-      // zonder geluid en herhalend, zoals voorheen.
+      // Eigen video: 'volgende', klik of K = afspelen/pauzeren. Oudere
+      // presentaties: zonder geluid en herhalend, zoals voorheen.
+      el.dataset.kind='video';
       const v=document.createElement('video');
       v.src=mb.src;v.playsInline=true;v.preload='auto';
       v.muted=mb.muted!==false;v.loop=mb.loop!==false;
       el.style.pointerEvents='auto';
       el.appendChild(v);
       const btn=document.createElement('div');btn.className='vid-play';el.appendChild(btn);
-      v.addEventListener('play',()=>el.classList.add('playing'));
+      v.addEventListener('play',()=>{el.dataset.started='1';el.classList.add('playing');});
       v.addEventListener('pause',()=>el.classList.remove('playing'));
-      v.addEventListener('click',e=>{e.stopPropagation();if(v.paused)pPlayVideo(v);else v.pause();});
+      v.addEventListener('click',e=>{e.stopPropagation();if(v.paused){el.dataset.started='1';pPlayVideo(v);}else v.pause();});
       if(mb.autoplay!==false)requestAnimationFrame(()=>{if(v.isConnected)pPlayVideo(v);});
     } else if(mb.type==='youtube'){
+      // Eerst een voorbeeldafbeelding; zodra de dia stilstaat wordt de speler
+      // geladen (pPrepareSlideMedia). Starten: 'volgende', K of een klik.
+      el.dataset.kind='youtube';el.dataset.yt=mb.src;
+      el.dataset.start=String(Math.max(0,parseInt(mb.start)||0));
       el.style.pointerEvents='auto';
-      const start=Math.max(0,parseInt(mb.start)||0);
-      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}',${start})"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
+      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();pStartMedia(this.parentElement)"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
     }
     container.appendChild(el);
     el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');
@@ -1364,8 +1433,8 @@ function showPresentMediaBlocks(idx){
 
 function stopPresentMediaBlocks(){
   const container=document.getElementById('present-media');
-  // Stop all videos
-  container.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
+  // Alle video's stoppen en YouTube-spelers opruimen
+  pDisposeMedia(container);
   container.innerHTML='';
 }
 
@@ -1383,50 +1452,6 @@ function ensureYTApi(){
     document.head.appendChild(tag);
   });
   return _ytApiPromise;
-}
-
-let _presentPlayer=null;
-// Klik-om-af-te-spelen voor YouTube in de presentatie. Via http(s) (de app
-// draait op http://127.0.0.1, zie main.js) werkt de IFrame-API: zo herkennen
-// we "video klaar" en tonen we een nette foutmelding i.p.v. de foutcode.
-// start: beginnen op dit aantal seconden.
-// disablekb: de toetsen bedienen de presentatie (pijltjes = dia), niet de
-// speler (anders springen ← → 5 seconden in de video). Afspelen/pauzeren met
-// klikken of de toets K.
-function playPresentYouTube(el,id,start){
-  if(!YT_ID_RE.test(id||''))return;
-  start=Math.max(0,parseInt(start)||0);
-  // Vanaf file:// (geëxporteerd bestand met dubbelklik geopend) weigert YouTube
-  // insluiten: open de video dan rechtstreeks op YouTube.
-  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id+(start?'&t='+start+'s':''),'_blank');return;}
-  const wrap=el.parentElement;
-  wrap.style.pointerEvents='auto';
-  wrap.innerHTML='<div class="yt-player"></div>';
-  const mount=wrap.querySelector('.yt-player');
-  ensureYTApi().then(()=>{
-    if(!mount.isConnected)return; // intussen naar een andere dia gegaan
-    try{if(_presentPlayer&&_presentPlayer.destroy)_presentPlayer.destroy();}catch(e){}
-    _presentPlayer=new YT.Player(mount,{
-      videoId:id,
-      host:'https://www.youtube-nocookie.com',
-      playerVars:{autoplay:1,rel:0,playsinline:1,disablekb:1,iv_load_policy:3,fs:1,start:start,origin:location.origin},
-      events:{
-        onReady:e=>{try{e.target.playVideo();}catch(_){}},
-        onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)showYtNextOverlay(wrap);},
-        onError:()=>{wrap.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
-      }
-    });
-  });
-}
-// Overlay die over de afgespeelde video verschijnt zodra die klaar is, zodat
-// een klik wél naar de volgende dia gaat (de iframe slokt anders alle kliks op).
-function showYtNextOverlay(wrap){
-  if(wrap.querySelector('.yt-next-overlay'))return;
-  const ov=document.createElement('div');
-  ov.className='yt-next-overlay';
-  ov.innerHTML='<span>Klik voor volgende ▶</span>';
-  ov.onclick=ev=>{ev.stopPropagation();pNext();};
-  wrap.appendChild(ov);
 }
 
 function renderFrame(scrollX){
