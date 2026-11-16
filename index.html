@@ -310,11 +310,20 @@
   #media-controls.visible{display:flex}
   #media-controls::before{content:'▓ MEDIA.sys';position:absolute;top:0;left:0;right:0;height:26px;background:linear-gradient(180deg,var(--accent),var(--accent-2));border-bottom:2px solid var(--border);color:#fff;font-family:var(--font-pixel);font-size:10px;padding:8px 10px;box-sizing:border-box;letter-spacing:1.5px;text-transform:uppercase}
   #media-controls .mc-label{font-family:var(--font-pixel);font-size:9px;color:var(--ink);text-transform:uppercase;letter-spacing:1px;margin-right:2px}
+  .mc-opts{display:none;align-items:center;gap:6px}
+  .mc-opts.visible{display:inline-flex}
+  .mc-check{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap}
+  .mc-check input{accent-color:var(--accent);cursor:pointer}
+  body.classic .mc-check{font-family:'Outfit',sans-serif;font-size:11px}
 
   /* Presentation media */
   .present-media{position:absolute;opacity:0;z-index:101;pointer-events:none}
   .present-media.visible{opacity:1}
   .present-media img,.present-media video,.present-media iframe{display:block;width:100%;height:100%;border:none;border-radius:0}
+  .present-media video{cursor:pointer;background:#000}
+  .vid-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;background:rgba(0,0,0,.55);pointer-events:none;transition:opacity .2s}
+  .vid-play::after{content:'';position:absolute;top:50%;left:56%;transform:translate(-50%,-50%);border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent #fff}
+  .present-media.playing .vid-play{opacity:0}
   .yt-thumb{position:relative;width:100%;height:100%;cursor:pointer;background:#000;overflow:hidden}
   .yt-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.85);border-radius:14px;pointer-events:none}
@@ -703,6 +712,17 @@
           <span class="mc-label">Dekking</span>
           <input type="range" id="mc-opacity-range" min="0" max="100" value="100" style="width:70px;accent-color:var(--accent)">
           <span id="mc-opacity-val" style="font-size:10px;color:var(--ink-light);min-width:28px">100%</span>
+          <span class="mc-opts" id="mc-video-opts">
+            <div class="t-sep"></div>
+            <label class="mc-check" title="Start vanzelf als de dia verschijnt"><input type="checkbox" id="mc-autoplay"> Auto&nbsp;start</label>
+            <label class="mc-check"><input type="checkbox" id="mc-sound"> Geluid</label>
+            <label class="mc-check"><input type="checkbox" id="mc-loop"> Herhalen</label>
+          </span>
+          <span class="mc-opts" id="mc-yt-opts">
+            <div class="t-sep"></div>
+            <span class="mc-label">Start bij</span>
+            <input type="text" class="size-input" id="mc-yt-start" placeholder="0:00" title="Begin de video op dit tijdstip, bijv. 1:30 (handig om een intro over te slaan)">
+          </span>
           <div class="t-sep"></div>
           <button class="style-btn" onclick="moveLayerUp('mb')" title="Laag omhoog">&#9650;</button>
           <button class="style-btn" onclick="moveLayerDown('mb')" title="Laag omlaag">&#9660;</button>
@@ -759,7 +779,8 @@
       <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Kies <em>Presenteren ▾</em> om vanaf de huidige dia te beginnen of de tekensnelheid in te stellen.<br><br>
       <strong>Bestand</strong> — <kbd>Ctrl+S</kbd> opslaan (daarna direct in hetzelfde bestand) &nbsp; <kbd>Ctrl+Shift+S</kbd> opslaan als &nbsp; <kbd>Ctrl+O</kbd> openen. Je kunt ook een <em>.json</em>-presentatie op het venster slepen. Wijzigingen worden automatisch bewaard: sluit je zonder op te slaan, dan biedt de app bij de volgende start herstel aan.<br><br>
       <strong>Bewerken</strong> — <kbd>Ctrl+Z</kbd> ongedaan maken &nbsp; <kbd>Ctrl+Y</kbd> opnieuw &nbsp; <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> blok kopiëren en plakken (ook naar een andere dia) &nbsp; <kbd>Ctrl+D</kbd> dupliceren &nbsp; <kbd>Delete</kbd> verwijderen &nbsp; <kbd>pijltjes</kbd> blok verschuiven (met <kbd>Shift</kbd> per 10) &nbsp; <kbd>Esc</kbd> deselecteren &nbsp; <kbd>PgUp</kbd>/<kbd>PgDn</kbd> vorige/volgende dia.<br><br>
-      <strong>Presenteren</strong> — <kbd>F5</kbd> vanaf het begin &nbsp; <kbd>Shift+F5</kbd> vanaf deze dia &nbsp; <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> volgende &nbsp; <kbd>←</kbd> vorige &nbsp; <kbd>Home</kbd>/<kbd>End</kbd> eerste/laatste dia &nbsp; <kbd>3</kbd> <kbd>Enter</kbd> naar dia 3 &nbsp; <kbd>B</kbd>/<kbd>W</kbd> zwart/wit scherm &nbsp; <kbd>F</kbd> volledig scherm &nbsp; <kbd>Esc</kbd> stoppen. Op een tablet: vegen.
+      <strong>Presenteren</strong> — <kbd>F5</kbd> vanaf het begin &nbsp; <kbd>Shift+F5</kbd> vanaf deze dia &nbsp; <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> volgende &nbsp; <kbd>←</kbd> vorige (de lijn tekent zich opnieuw) &nbsp; <kbd>Home</kbd>/<kbd>End</kbd> eerste/laatste dia &nbsp; <kbd>3</kbd> <kbd>Enter</kbd> naar dia 3 &nbsp; <kbd>K</kbd> video afspelen/pauzeren &nbsp; <kbd>B</kbd>/<kbd>W</kbd> zwart/wit scherm &nbsp; <kbd>F</kbd> volledig scherm &nbsp; <kbd>Esc</kbd> stoppen. Op een tablet: vegen.<br><br>
+      <strong>Video en YouTube</strong> — De pijltjes bedienen altijd de dia's, ook als een video speelt; afspelen en pauzeren doe je met een klik op de video of <kbd>K</kbd>. Bij YouTube kun je een starttijd instellen. YouTube kan reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, voeg dan een eigen videobestand toe (<em>Toevoegen → Video</em>): daarbij kies je zelf of hij vanzelf start, met geluid speelt en herhaalt, en hij gaat ook mee in de HTML-export.
     </p>
     </div><br>
     <button class="t-btn" onclick="document.getElementById('help-modal').classList.remove('visible')">Sluiten</button>
@@ -1046,6 +1067,7 @@ function pNext(){
     return;
   }
   if(pIdx+1>=slides.length){showEndScreen();return;}
+  pPauseMedia();
   pIdx++;
   const first=!pHasShown;pHasShown=true;
   pAnimating=true;
@@ -1057,11 +1079,7 @@ function pNext(){
     // in plaats van pas nadat de lijn klaar is.
     pOverlayScrollFrom=pTargetScrollX;
     showText(pIdx);
-    document.querySelectorAll('#present-textblocks > *, #present-media > *').forEach(el=>{
-      if(!el.animate)return;
-      const to=getComputedStyle(el).opacity;
-      el.animate([{opacity:0},{opacity:to}],{duration:700,easing:'ease-out'});
-    });
+    pFadeInOverlays();
     animateDrawSlide(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
   }else{
     // Add new slide's overlays offset to the right (old content stays in place)
@@ -1078,26 +1096,81 @@ function pPrev(){
     if(pCancel){pCancel();pCancel=null;}
     pAnimating=false;
   }
-  if(pIdx<=0){if(wasAnimating&&pIdx===0)pGoTo(0);return;}
+  if(pIdx<=0){if(wasAnimating&&pIdx===0)pGoTo(0,true);return;}
   pGoTo(pIdx-1);
 }
 
-// Spring direct naar een dia (terugbladeren, Home/End, nummer + Enter): de
-// dia staat er meteen helemaal, zonder tekenanimatie.
-function pGoTo(idx){
+// Tekst en media van een dia zacht laten verschijnen (als er geen
+// camerabeweging is die ze in beeld schuift)
+function pFadeInOverlays(){
+  document.querySelectorAll('#present-textblocks > *, #present-media > *').forEach(el=>{
+    if(!el.animate)return;
+    const to=getComputedStyle(el).opacity;
+    el.animate([{opacity:0},{opacity:to}],{duration:700,easing:'ease-out'});
+  });
+}
+
+// Naar een dia gaan (terugbladeren, Home/End, nummer + Enter). De camera
+// staat meteen op die dia en de lijn tekent zich opnieuw, met het stukje
+// verbinding vanaf de vorige dia. instant=true: meteen helemaal getekend.
+function pGoTo(idx,instant){
   if(!slides.length)return;
   idx=Math.max(0,Math.min(slides.length-1,idx|0));
   if(pCancel){pCancel();pCancel=null;}
   pAnimating=false;
+  pPauseMedia();
   hideEndScreen();setBlank(null);
   if(idx<pStartIdx)pStartIdx=0;
   pHasShown=true;
   pIdx=idx;
   applySlideBg(idx);
-  rebuildTo(idx);
-  pTargetScrollX=idx*pViewport.slideStride;
   updatePresentCounter();
-  finalizeSlideOverlays(idx,true);
+  pTargetScrollX=idx*pViewport.slideStride;
+  const pts=pSlidePoints[idx];
+  if(instant||!pts||!pts.length){
+    rebuildTo(idx);
+    finalizeSlideOverlays(idx,true);
+    return;
+  }
+  // Alles vóór deze dia staat er al (buiten beeld); deze dia tekent opnieuw
+  pOverlayScrollFrom=pTargetScrollX;
+  document.getElementById('present-overlays').style.transform='';
+  if(idx-1>=pStartIdx)rebuildTo(idx-1,true);else window._drawnPoints=[];
+  renderFrame(pTargetScrollX);
+  stopPresentMediaBlocks();
+  showText(idx);
+  pFadeInOverlays();
+  pAnimating=true;
+  const done=()=>{finalizeSlideOverlays(idx);pAnimating=false;};
+  const prev=pSlidePoints[idx-1];
+  if(window._drawnPoints.length&&prev&&prev.length)animateTransitionAndDraw(idx,done,true);
+  else animateDrawSlide(idx,done);
+}
+
+// Video's en YouTube op de dia die je verlaat stoppen (anders loopt het
+// geluid door tijdens de overgang)
+function pPauseMedia(){
+  try{if(_presentPlayer&&_presentPlayer.pauseVideo)_presentPlayer.pauseVideo();}catch(e){}
+  document.querySelectorAll('#present-media video').forEach(v=>{try{v.pause();}catch(e){}});
+}
+// Afspelen/pauzeren van de video op de huidige dia (toets K, zoals op YouTube)
+function pToggleMedia(){
+  const vids=[...document.querySelectorAll('#present-media video')];
+  if(_presentPlayer&&_presentPlayer.getPlayerState&&document.querySelector('#present-media .yt-player iframe')){
+    try{
+      const st=_presentPlayer.getPlayerState();
+      if(st===1||st===3)_presentPlayer.pauseVideo();else _presentPlayer.playVideo();
+      return;
+    }catch(e){}
+  }
+  if(vids.length){const v=vids[0];if(v.paused)pPlayVideo(v);else v.pause();return;}
+  const thumb=document.querySelector('#present-media .yt-thumb');
+  if(thumb)thumb.click();
+}
+// Video met geluid starten; lukt dat niet (beleid van de browser), dan zonder geluid
+function pPlayVideo(v){
+  const p=v.play();
+  if(p&&p.catch)p.catch(()=>{v.muted=true;v.play().catch(()=>{});});
 }
 
 // Eindscherm na de laatste dia, zodat één klik te veel de presentatie niet
@@ -1138,7 +1211,7 @@ function pWakeCursor(){
   pCursorTimer=setTimeout(()=>{if(presentHost.isActive())pr.style.cursor='none';},2500);
 }
 
-function rebuildTo(idx){
+function rebuildTo(idx,noRender){
   window._drawnPoints=[];
   // Vanaf de startdia: dia's daarvoor zijn (nog) niet getekend
   for(let i=(idx>=pStartIdx?pStartIdx:0);i<=idx;i++){
@@ -1150,7 +1223,7 @@ function rebuildTo(idx){
     }
     pts.forEach(p=>window._drawnPoints.push({...p}));
   }
-  renderFrame(idx*pViewport.slideStride);
+  if(!noRender)renderFrame(idx*pViewport.slideStride);
 }
 
 function positionTextOverlays(){
@@ -1267,11 +1340,22 @@ function showPresentMediaBlocks(idx){
     if(mb.type==='image'){
       el.innerHTML=`<img src="${escHTML(mb.src)}" alt="">`;
     } else if(mb.type==='video'){
-      const autoplay=mb.autoplay!==false;
-      el.innerHTML=`<video src="${escHTML(mb.src)}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
+      // Eigen video: klik (of K) = afspelen/pauzeren. Oudere presentaties:
+      // zonder geluid en herhalend, zoals voorheen.
+      const v=document.createElement('video');
+      v.src=mb.src;v.playsInline=true;v.preload='auto';
+      v.muted=mb.muted!==false;v.loop=mb.loop!==false;
+      el.style.pointerEvents='auto';
+      el.appendChild(v);
+      const btn=document.createElement('div');btn.className='vid-play';el.appendChild(btn);
+      v.addEventListener('play',()=>el.classList.add('playing'));
+      v.addEventListener('pause',()=>el.classList.remove('playing'));
+      v.addEventListener('click',e=>{e.stopPropagation();if(v.paused)pPlayVideo(v);else v.pause();});
+      if(mb.autoplay!==false)requestAnimationFrame(()=>{if(v.isConnected)pPlayVideo(v);});
     } else if(mb.type==='youtube'){
       el.style.pointerEvents='auto';
-      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}')"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
+      const start=Math.max(0,parseInt(mb.start)||0);
+      el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}',${start})"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
     }
     container.appendChild(el);
     el.style.opacity=mb.opacity!==undefined?mb.opacity:1;el.classList.add('visible');
@@ -1305,20 +1389,27 @@ let _presentPlayer=null;
 // Klik-om-af-te-spelen voor YouTube in de presentatie. Via http(s) (de app
 // draait op http://127.0.0.1, zie main.js) werkt de IFrame-API: zo herkennen
 // we "video klaar" en tonen we een nette foutmelding i.p.v. de foutcode.
-function playPresentYouTube(el,id){
+// start: beginnen op dit aantal seconden.
+// disablekb: de toetsen bedienen de presentatie (pijltjes = dia), niet de
+// speler (anders springen ← → 5 seconden in de video). Afspelen/pauzeren met
+// klikken of de toets K.
+function playPresentYouTube(el,id,start){
+  if(!YT_ID_RE.test(id||''))return;
+  start=Math.max(0,parseInt(start)||0);
   // Vanaf file:// (geëxporteerd bestand met dubbelklik geopend) weigert YouTube
   // insluiten: open de video dan rechtstreeks op YouTube.
-  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id,'_blank');return;}
+  if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id+(start?'&t='+start+'s':''),'_blank');return;}
   const wrap=el.parentElement;
   wrap.style.pointerEvents='auto';
   wrap.innerHTML='<div class="yt-player"></div>';
   const mount=wrap.querySelector('.yt-player');
   ensureYTApi().then(()=>{
+    if(!mount.isConnected)return; // intussen naar een andere dia gegaan
     try{if(_presentPlayer&&_presentPlayer.destroy)_presentPlayer.destroy();}catch(e){}
     _presentPlayer=new YT.Player(mount,{
       videoId:id,
       host:'https://www.youtube-nocookie.com',
-      playerVars:{autoplay:1,rel:0,playsinline:1,modestbranding:1,origin:location.origin},
+      playerVars:{autoplay:1,rel:0,playsinline:1,disablekb:1,iv_load_policy:3,fs:1,start:start,origin:location.origin},
       events:{
         onReady:e=>{try{e.target.playVideo();}catch(_){}},
         onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)showYtNextOverlay(wrap);},
@@ -1421,21 +1512,24 @@ function animateTransition(slideIdx,done){
 }
 
 // Unified transition: camera pan + connection curve + drawing in one seamless animation
-function animateTransitionAndDraw(slideIdx,doneCb){
+// noPan: de camera staat al op de dia (terugbladeren); alleen het stukje
+// verbinding dat de dia binnenkomt en de dia zelf worden getekend.
+function animateTransitionAndDraw(slideIdx,doneCb,noPan){
   const prevPts=pSlidePoints[slideIdx-1],newPts=pSlidePoints[slideIdx];
   // Fallback: if either slide has no points, use sequential approach
   if(!prevPts?.length||!newPts?.length){
+    if(noPan){animateDrawSlide(slideIdx,doneCb);return;}
     animateTransition(slideIdx,()=>{animateDrawSlide(slideIdx,doneCb);});
     return;
   }
   const connectionPoints=generateConnectionPoints(prevPts,newPts,80,slideIdx);
-  const scrollFrom=(slideIdx-1)*pViewport.slideStride,scrollTo=slideIdx*pViewport.slideStride;
+  const scrollTo=slideIdx*pViewport.slideStride,scrollFrom=noPan?scrollTo:(slideIdx-1)*pViewport.slideStride;
   const drawDuration=slideDrawDuration();
   // Phase timing:
   // - Connection curve: 0 → connDur (line bridges gap between slides)
   // - Camera pan: 0 → connDur + cameraSettle (camera keeps decelerating into drawing start)
   // - Slide drawing: connDur → connDur + drawDuration
-  const connDur=1200;
+  const connDur=noPan?800:1200;
   const cameraSettle=400;
   const cameraDur=connDur+cameraSettle;
   const totalDur=connDur+drawDuration;
@@ -1520,11 +1614,23 @@ document.addEventListener('keydown',e=>{
   else if(k==='b'||k==='B'||k==='.'){e.preventDefault();setBlank('#000');}
   else if(k==='w'||k==='W'||k===','){e.preventDefault();setBlank('#fff');}
   else if(k==='f'||k==='F'){e.preventDefault();toggleFullscreen();}
+  else if(k==='k'||k==='K'){e.preventDefault();pToggleMedia();}
   else if(k==='Escape'){if(pBlank)setBlank(null);else presentHost.onEscape(e);}
 });
 (function(){
   const presenter=document.getElementById('presenter');
   let touchX=null,touchY=null,swipedAt=0;
+  // Klik je in een YouTube-video (afspelen, tijdbalk, volume), dan krijgt die
+  // het toetsenbord. Haal de focus meteen terug, zodat pijltjes en spatie de
+  // dia's blijven bedienen.
+  presenter.tabIndex=-1;presenter.style.outline='none';
+  window.addEventListener('blur',()=>{
+    if(!presentHost.isActive())return;
+    setTimeout(()=>{
+      const a=document.activeElement;
+      if(a&&a.tagName==='IFRAME'&&presenter.contains(a)){try{presenter.focus({preventScroll:true});}catch(e){}}
+    },0);
+  });
   presenter.addEventListener('click',e=>{
     if(Date.now()-swipedAt<500)return;
     // Knoppen: daarna de focus weghalen, anders 'klikt' de spatiebalk ze nog eens
@@ -1991,7 +2097,9 @@ async function addVideoFile(f,at){
   }
   const busy=showToast('Video inladen…','info',0);
   const reader=new FileReader();
-  reader.onload=ev=>{busy.close();addMediaBlock({type:'video',src:ev.target.result,width:560,height:315,autoplay:true},at);};
+  // Nieuwe video: met geluid, start met een klik (of K) in de presentatie.
+  // Aan te passen via de opties onder het blok.
+  reader.onload=ev=>{busy.close();addMediaBlock({type:'video',src:ev.target.result,width:560,height:315,autoplay:false,muted:false,loop:false},at);};
   reader.onerror=()=>{busy.close();showToast('Deze video kan niet worden gelezen.','error');};
   reader.readAsDataURL(f);
 }
@@ -2002,14 +2110,14 @@ document.getElementById('video-file-input').addEventListener('change',e=>{
 async function addYouTubeBlock(){
   const r=await appDialog({
     kind:'youtube',title:'YouTube toevoegen',
-    message:'Plak de link van een YouTube-video.',
+    message:'Plak de link van een YouTube-video. Een starttijd in de link (bijv. ?t=90) wordt overgenomen.\n\nLet op: YouTube kan vóór of tijdens een video reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, gebruik dan een eigen videobestand (Toevoegen → Video).',
     input:{placeholder:'https://www.youtube.com/watch?v=…'},
     validate:v=>extractYouTubeID(v.trim())?'':'Geen geldige YouTube-link herkend. Bijvoorbeeld: https://youtu.be/… of https://www.youtube.com/watch?v=…',
     buttons:[{label:'Annuleren',value:'cancel'},{label:'Toevoegen',value:'ok',primary:true}]
   });
   if(r.button!=='ok')return;
   const id=extractYouTubeID(r.value.trim());
-  if(id)addMediaBlock({type:'youtube',src:id,width:560,height:315},null);
+  if(id)addMediaBlock({type:'youtube',src:id,width:560,height:315,start:parseYouTubeStart(r.value.trim())},null);
 }
 
 function renderMediaBlocks(){
@@ -2036,7 +2144,7 @@ function renderMediaBlocks(){
     } else if(mb.type==='video'){
       el.innerHTML=`<video src="${escHTML(mb.src)}" muted loop style="pointer-events:none"></video>`;
     } else if(mb.type==='youtube'){
-      el.innerHTML=`<div class="yt-placeholder"><div class="yt-play"></div><span class="yt-id">${YT_ID_RE.test(mb.src||'')?'YouTube: '+escHTML(mb.src):'Ongeldige YouTube-link'}</span></div>`;
+      el.innerHTML=`<div class="yt-placeholder"><div class="yt-play"></div><span class="yt-id">${YT_ID_RE.test(mb.src||'')?'YouTube: '+escHTML(mb.src)+(mb.start?' · vanaf '+formatSeconds(mb.start):''):'Ongeldige YouTube-link'}</span></div>`;
     } else if(mb.type==='svgtext'){
       const parser=new DOMParser();const doc=parser.parseFromString(mb.src,'image/svg+xml');const svgEl=doc.querySelector('svg');
       if(svgEl){
@@ -2276,7 +2384,57 @@ function updateMcInputs(){
   const opVal=Math.round((mb.opacity!==undefined?mb.opacity:1)*100);
   document.getElementById('mc-opacity-range').value=opVal;
   document.getElementById('mc-opacity-val').textContent=opVal+'%';
+  document.getElementById('mc-video-opts').classList.toggle('visible',mb.type==='video');
+  document.getElementById('mc-yt-opts').classList.toggle('visible',mb.type==='youtube');
+  if(mb.type==='video'){
+    document.getElementById('mc-autoplay').checked=mb.autoplay!==false;
+    document.getElementById('mc-sound').checked=mb.muted===false;
+    document.getElementById('mc-loop').checked=mb.loop!==false;
+  }
+  if(mb.type==='youtube'){
+    const inp=document.getElementById('mc-yt-start');
+    if(document.activeElement!==inp)inp.value=mb.start?formatSeconds(mb.start):'';
+  }
 }
+// "1:30" ⇄ 90 seconden (ook "1:02:03" en "90")
+function parseSeconds(v){
+  v=String(v||'').trim();if(!v)return 0;
+  const parts=v.split(':').map(p=>parseFloat(p.replace(',','.')));
+  if(parts.some(p=>!isFinite(p)||p<0))return null;
+  return Math.round(parts.reduce((t,p)=>t*60+p,0));
+}
+function formatSeconds(s){
+  s=Math.max(0,Math.round(s||0));
+  const h=Math.floor(s/3600),m=Math.floor(s/60)%60,sec=s%60;
+  return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');
+}
+// Starttijd uit een YouTube-link halen (?t=90, &t=1m30s, ?start=90)
+function parseYouTubeStart(url){
+  const m=/[?&#](?:t|start)=([0-9hms:.]+)/i.exec(url||'');
+  if(!m)return 0;
+  const v=m[1];
+  if(/^\d+$/.test(v))return parseInt(v,10);
+  const hms=/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/i.exec(v);
+  if(hms)return(parseInt(hms[1]||0)*3600)+(parseInt(hms[2]||0)*60)+parseInt(hms[3]||0);
+  return parseSeconds(v)||0;
+}
+['mc-autoplay','mc-sound','mc-loop'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',e=>{
+    if(selectedMB===null)return;
+    const mb=slides[currentSlide].mediaBlocks[selectedMB];if(!mb||mb.type!=='video')return;
+    if(id==='mc-autoplay')mb.autoplay=e.target.checked;
+    else if(id==='mc-sound')mb.muted=!e.target.checked;
+    else mb.loop=e.target.checked;
+  });
+});
+document.getElementById('mc-yt-start').addEventListener('change',e=>{
+  if(selectedMB===null)return;
+  const mb=slides[currentSlide].mediaBlocks[selectedMB];if(!mb||mb.type!=='youtube')return;
+  const s=parseSeconds(e.target.value);
+  if(s===null){showToast('Starttijd niet herkend. Gebruik bijvoorbeeld 1:30 of 90.','warn');e.target.value=mb.start?formatSeconds(mb.start):'';return;}
+  mb.start=s;e.target.value=s?formatSeconds(s):'';
+  renderMediaBlocks();
+});
 
 document.getElementById('mc-width-input').addEventListener('input',e=>{
   if(selectedMB===null)return;
@@ -3593,18 +3751,28 @@ function composeOneLineText(text, letterColors){
   const pad=20;
   const vbX=-pad,vbY=-pad,vbW=Math.ceil(totalW)+pad*2,vbH=maxSvgHeight+pad*2;
   // Aansluitpunten voor de lijnen links/rechts (zie getSvgTextScreenEndpoints):
-  // het eerste/laatste zichtbare punt als de lijn daar vloeiend kan aansluiten,
-  // anders het begin-/eindpunt op de schrijflijn met de 'woord'-richting.
+  // altijd het eerste/laatste zichtbare punt, zodat de lijn echt vastzit aan
+  // de letter of het leesteken (bijv. de punt van een ? of !).
+  // Richting: die van de letter zelf als dat vloeiend aansluit; begint/eindigt
+  // het teken met een onzichtbare verbinding (leestekens), dan de richting van
+  // die verbinding (naar/van de schrijflijn); anders de 'woord'-richting.
   let attach='';
   if(firstG&&lastG){
     const fmt=v=>(Math.round(v*100)/100);
     const firstPts=fastSamplePath(paths[0].d.replace(/[Zz]/g,''),40);
     const lastPts=fastSamplePath(paths[paths.length-1].d.replace(/[Zz]/g,''),40);
-    let sx=firstDx+firstG.startX,sy=firstG.startY,fx=lastDx+lastG.finishX,fy=lastG.finishY;
-    if(firstG.paths[0].visible&&firstPts&&firstPts.length){sx=firstPts[0].x;sy=firstPts[0].y;}
-    if(lastG.paths[lastG.paths.length-1].visible&&lastPts&&lastPts.length){const lp=lastPts[lastPts.length-1];fx=lp.x;fy=lp.y;}
-    const st=oneLineSmoothJoin(firstG.entryTan)?firstG.entryTan:ONE_LINE_JOIN_TAN;
-    const ft=oneLineSmoothJoin(lastG.exitTan)?lastG.exitTan:ONE_LINE_JOIN_TAN;
+    const s0x=firstDx+firstG.startX,s0y=firstG.startY,f0x=lastDx+lastG.finishX,f0y=lastG.finishY;
+    let sx=s0x,sy=s0y,fx=f0x,fy=f0y;
+    if(firstPts&&firstPts.length){sx=firstPts[0].x;sy=firstPts[0].y;}
+    if(lastPts&&lastPts.length){const lp=lastPts[lastPts.length-1];fx=lp.x;fy=lp.y;}
+    const dirTo=(ax,ay,bx,by)=>{const l=Math.hypot(bx-ax,by-ay);return l>3?{x:(bx-ax)/l,y:(by-ay)/l}:null;};
+    const pick=t=>oneLineSmoothJoin(t)?t:ONE_LINE_JOIN_TAN;
+    // Bij een leesteken: de richting van/naar de schrijflijn, half naar rechts
+    // gedraaid (zo loopt de lijn vanaf een hoog aanhalingsteken schuin omlaag
+    // en vanaf een punt schuin omhoog weg, zonder bult)
+    const viaLine=d=>{if(!d)return ONE_LINE_JOIN_TAN;const x=d.x+1,y=d.y,l=Math.hypot(x,y);return l?{x:x/l,y:y/l}:ONE_LINE_JOIN_TAN;};
+    const st=firstG.paths[0].visible?pick(firstG.entryTan):viaLine(dirTo(s0x,s0y,sx,sy));
+    const ft=lastG.paths[lastG.paths.length-1].visible?pick(lastG.exitTan):viaLine(dirTo(fx,fy,f0x,f0y));
     attach=` data-attach-start="${[sx,sy,st.x,st.y].map(fmt).join(',')}" data-attach-end="${[fx,fy,ft.x,ft.y].map(fmt).join(',')}"`;
   }
   const pathEls=paths.map(p=>{
@@ -4549,11 +4717,20 @@ function normalizeSlide(s){
       else if(type==='youtube'&&!YT_ID_RE.test(src))src=extractYouTubeID(src)||'';
       else if(/^\s*javascript:/i.test(src))src='';
       const base={type,src,x:numOr(mb.x,200),y:numOr(mb.y,200),width:numOr(mb.width,400),height:numOr(mb.height,300),rotation:numOr(mb.rotation,0),opacity:numOr(mb.opacity,1),autoplay:mb.autoplay!==false,zOrder:numOr(mb.zOrder,0)};
+      // Video: zonder deze velden (oudere bestanden) zonder geluid en herhalend
+      if(type==='video'){base.muted=mb.muted!==false;base.loop=mb.loop!==false;}
+      if(type==='youtube')base.start=Math.max(0,Math.round(numOr(mb.start,0)));
       if(type==='svgtext'){
         const pts=p=>Array.isArray(p)?p.filter(q=>q&&isFinite(q.x)&&isFinite(q.y)).map(q=>{const o={x:+q.x,y:+q.y};if(q.cpIn&&isFinite(q.cpIn.x)&&isFinite(q.cpIn.y))o.cpIn={x:+q.cpIn.x,y:+q.cpIn.y};if(q.cpOut&&isFinite(q.cpOut.x)&&isFinite(q.cpOut.y))o.cpOut={x:+q.cpOut.x,y:+q.cpOut.y};return o;}):null;
         base.text=strOr(mb.text,'');base.letterColors=Array.isArray(mb.letterColors)?mb.letterColors.map(c=>safeColor(c,'#1a1a1a')):[];
         base.lineLeftPath=pts(mb.lineLeftPath);base.lineRightPath=pts(mb.lineRightPath);
         base.lineLeftColor=mb.lineLeftColor?safeColor(mb.lineLeftColor,null):null;base.lineRightColor=mb.lineRightColor?safeColor(mb.lineRightColor,null):null;
+        // Opnieuw opbouwen met het huidige font, zodat verbeteringen aan
+        // letters en leestekens ook in bestaande presentaties doorwerken
+        if(base.text&&typeof oneLineFont!=='undefined'&&Object.keys(oneLineFont).length){
+          const fresh=composeOneLineText(base.text,base.letterColors);
+          if(fresh)base.src=fresh;
+        }
       }
       return base;
     })};
@@ -4799,9 +4976,9 @@ async function exportStandaloneHTML(){
   saveInputs();
   closeAllMenus();
   if(!slides.some(slideHasContent)){showToast('Deze presentatie is nog leeg: er valt niets te exporteren.','warn');return;}
-  const hasVideos=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='video'));
+  const videoBytes=slides.reduce((n,s)=>n+(s.mediaBlocks||[]).filter(mb=>mb.type==='video').reduce((m,mb)=>m+(mb.src||'').length*0.75,0),0);
   const hasYouTube=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube'));
-  if(hasVideos){showToast('Let op: lokale video\'s worden niet meegenomen in de HTML-export.','warn',7000);}
+  if(videoBytes>40*1024*1024){showToast(`De video's gaan mee in het HTML-bestand; dat wordt ongeveer ${Math.round(videoBytes/1024/1024)} MB groot.`,'info',7000);}
   if(hasYouTube){showToast('Let op: in de geëxporteerde HTML opent een YouTube-video in een nieuw tabblad (insluiten werkt niet vanaf een bestand). Presenteer vanuit de app om de video ín de presentatie te spelen.','warn',9000);}
 
   // Show loading
@@ -4838,9 +5015,10 @@ async function exportStandaloneHTML(){
         size:tb.size||80,bold:!!tb.bold,italic:!!tb.italic,
         align:tb.align||'left',rotation:tb.rotation||0,color:tb.color||'#1a1a1a',zOrder:tb.zOrder||0
       })),
-      mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='video'&&mb.type!=='svgtext').map(mb=>({
+      mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='svgtext').map(mb=>({
         type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,
-        rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0
+        rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0,
+        autoplay:mb.autoplay!==false,muted:mb.muted!==false,loop:mb.loop!==false,start:mb.start||0
       }))
     }));
 
@@ -4875,6 +5053,10 @@ body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfi
 .present-media{position:absolute;opacity:0;z-index:101;pointer-events:none}
 .present-media.visible{opacity:1}
 .present-media img,.present-media video,.present-media iframe{display:block;width:100%;height:100%;border:none;border-radius:0}
+.present-media video{cursor:pointer;background:#000}
+.vid-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;background:rgba(0,0,0,.55);pointer-events:none;transition:opacity .2s}
+.vid-play::after{content:'';position:absolute;top:50%;left:56%;transform:translate(-50%,-50%);border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent #fff}
+.present-media.playing .vid-play{opacity:0}
 .yt-thumb{position:relative;width:100%;height:100%;cursor:pointer;background:#000;overflow:hidden}
 .yt-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .yt-thumb .yt-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:48px;background:rgba(255,0,0,.85);border-radius:14px;pointer-events:none}
