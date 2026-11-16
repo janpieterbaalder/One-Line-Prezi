@@ -150,7 +150,7 @@
 
   #upload-zone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;cursor:default;border-radius:0;transition:background .2s}
   #upload-zone:hover{background:rgba(255,94,184,.06)}
-  #upload-zone.has-art{opacity:0;pointer-events:none}
+  #upload-zone.has-art,#upload-zone.has-blocks{opacity:0;pointer-events:none}
   #upload-zone.dragging{background:rgba(255,94,184,.14);outline:3px dashed var(--accent);outline-offset:-10px}
   .upload-icon{width:60px;height:60px;border:3px dashed var(--border);border-radius:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-pixel);font-size:22px;color:var(--ink);background:var(--accent-yellow);box-shadow:var(--hard-shadow-sm);transition:background .2s}
   #upload-zone:hover .upload-icon{background:var(--accent-cyan);color:var(--ink)}
@@ -161,7 +161,7 @@
   #preview-wrap:hover #clear-art-btn.visible{opacity:1}
   #clear-art-btn:hover{background:var(--danger);color:#fff}
 
-  #presenter{display:none;position:fixed;inset:0;background:#0a0420;z-index:100;overflow:hidden}
+  #presenter{display:none;position:fixed;inset:0;background:#0a0420;z-index:100;overflow:hidden;user-select:none;-webkit-user-select:none}
   #present-canvas{position:absolute;background:var(--canvas-bg)}
   #present-counter{position:fixed;bottom:20px;right:30px;font-family:var(--font-pixel);font-size:10px;color:var(--accent-cyan);z-index:101;letter-spacing:2px}
   #present-controls{position:fixed;top:20px;right:24px;z-index:101;display:flex;gap:8px;opacity:0;transition:opacity .3s}
@@ -268,6 +268,17 @@
   .slide-thumb .duplicate-btn{opacity:0;background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:15px;padding:2px 4px;transition:opacity .2s,color .2s;font-family:var(--font-ui)}
   .slide-thumb:hover .duplicate-btn{opacity:1}
   .slide-thumb .duplicate-btn:hover{color:var(--accent)}
+  /* Miniaturen */
+  .slide-thumb{align-items:flex-start;position:relative}
+  .slide-thumb .num{padding-top:4px}
+  .thumb-frame{position:relative;width:100%;aspect-ratio:16/9;border:2px solid var(--border);overflow:hidden;margin-bottom:6px;background:#fff}
+  .thumb-img{display:block;width:100%;height:100%}
+  .thumb-img:not([src]){visibility:hidden}
+  .thumb-actions{position:absolute;top:14px;right:16px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+  .slide-thumb:hover .thumb-actions,.slide-thumb:focus-within .thumb-actions{opacity:1}
+  .slide-thumb .thumb-actions button{opacity:1;width:24px;height:24px;padding:0;background:var(--panel);border:2px solid var(--border);box-shadow:var(--hard-shadow-sm);color:var(--ink);font-size:14px;line-height:18px;display:flex;align-items:center;justify-content:center}
+  .slide-thumb .thumb-actions .delete-btn:hover{background:var(--danger);color:#fff}
+  .slide-thumb .thumb-actions .duplicate-btn:hover{background:var(--accent-yellow);color:var(--ink)}
 
   /* Media block overlays in editor */
   .media-overlay{position:absolute;cursor:move;outline:2px dashed transparent;outline-offset:-2px;border-radius:0;user-select:none;transition:outline-color .15s,box-shadow .15s;overflow:visible}
@@ -321,13 +332,53 @@
   .yt-dialog-box input:focus{box-shadow:var(--hard-shadow-sm),0 0 0 2px var(--accent-cyan)}
   .yt-dialog-box .yt-actions{display:flex;gap:8px;justify-content:flex-end}
 
-  /* Add content button + dropdown */
-  #add-content-wrap{position:relative;display:inline-block}
-  #add-content-dropdown{display:none;position:absolute;top:100%;left:0;background:var(--panel);border:2px solid var(--border);border-radius:0;padding:0;box-shadow:var(--hard-shadow);z-index:20;margin-top:6px;min-width:160px}
-  #add-content-dropdown.open{display:block}
-  #add-content-dropdown button{display:block;width:100%;background:var(--panel);border:none;border-bottom:1px dashed var(--ink-light);color:var(--ink);padding:8px 14px;cursor:pointer;font-family:var(--font-ui);font-size:14px;text-align:left;transition:background .1s}
-  #add-content-dropdown button:last-child{border-bottom:none}
-  #add-content-dropdown button:hover{background:var(--accent-yellow);color:var(--ink)}
+  /* Menu's (Bestand, Toevoegen, Presenteren) */
+  .menu-wrap{position:relative;display:inline-flex}
+  .menu-dropdown{display:none;position:absolute;top:100%;left:0;background:var(--panel);border:2px solid var(--border);border-radius:0;padding:0;box-shadow:var(--hard-shadow);z-index:40;margin-top:6px;min-width:180px}
+  .menu-dropdown.align-right{left:auto;right:0}
+  .menu-dropdown.open{display:block}
+  .menu-dropdown button{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;background:var(--panel);border:none;border-bottom:1px dashed var(--ink-light);color:var(--ink);padding:8px 14px;cursor:pointer;font-family:var(--font-ui);font-size:15px;text-align:left;transition:background .1s;white-space:nowrap}
+  .menu-dropdown button:last-child{border-bottom:none}
+  .menu-dropdown button:hover,.menu-dropdown button:focus-visible{background:var(--accent-yellow);color:var(--ink);outline:none}
+  .menu-dropdown kbd{font-family:var(--font-ui);font-size:12px;color:var(--ink-light);background:none;border:none;padding:0}
+  .split-btn .t-btn.primary:first-child{border-right-width:1px}
+  .split-btn .split-arrow{padding:6px 8px;border-left-width:1px}
+  .t-spacer{flex:1 1 0;min-width:0}
+  .menu-dropdown .menu-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:2px solid var(--border);background:var(--surface)}
+  .menu-dropdown .menu-row label{white-space:nowrap}
+  .menu-dropdown .menu-row #speed-range{flex:1;min-width:90px}
+  body.classic .menu-dropdown .menu-row{border-top:1px solid var(--border);background:none}
+  #slide-title-input{flex:1 1 120px;min-width:90px;width:120px}
+  #speed-val{font-family:var(--font-pixel);font-size:12px;min-width:14px;text-align:center;color:var(--ink)}
+  .kbd-hint{opacity:.55;font-size:.85em;margin-left:4px}
+  #doc-status{font-size:13px!important;margin-top:8px!important;padding-top:6px;border-top:1px dashed rgba(255,255,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #doc-status.dirty::before{content:'● ';color:var(--accent-yellow)}
+
+  /* Meldingen (toasts) */
+  #toast-wrap{position:fixed;right:18px;bottom:18px;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;max-width:min(440px,calc(100vw - 36px))}
+  .toast{pointer-events:auto;cursor:pointer;background:var(--panel);color:var(--ink);border:2px solid var(--border);box-shadow:var(--hard-shadow-sm);padding:9px 14px;font-family:var(--font-ui);font-size:15px;line-height:1.35;animation:toastIn .2s ease-out;border-left-width:8px}
+  .toast.ok{border-left-color:var(--accent-cyan-2)}
+  .toast.warn{border-left-color:#F5B800}
+  .toast.error{border-left-color:var(--danger)}
+  .toast.info{border-left-color:var(--accent)}
+  .toast.out{opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* Dialoogvenster (appDialog) */
+  .app-dialog{z-index:350}
+  .modal-box.dialog-box{max-width:480px}
+  .modal-box.dialog-box::before{content:'▓ VRAAG.exe  □ ×'}
+  .modal-box.dialog-box[data-kind="youtube"]::before{content:'▓ YOUTUBE.exe  □ ×'}
+  .modal-box.dialog-box[data-kind="olf"]::before{content:'▓ TEKST-PAD.exe  □ ×'}
+  .dialog-msg{margin-bottom:14px;white-space:pre-line}
+  .dialog-input{width:100%;padding:8px 12px;border:2px solid var(--border);border-radius:0;font-family:var(--font-ui);font-size:16px;outline:none;box-shadow:var(--hard-shadow-sm);color:var(--ink);background:#fff;margin-bottom:6px}
+  .dialog-input:focus{box-shadow:var(--hard-shadow-sm),0 0 0 2px var(--accent-cyan)}
+  .dialog-hint{min-height:20px;font-family:var(--font-ui);font-size:14px;color:var(--ink-light);margin-bottom:10px;line-height:1.35}
+  .dialog-hint.error{color:var(--danger)}
+  .dialog-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+
+  /* Slepen van bestanden op het canvas */
+  #preview-wrap.drop-target{outline:4px dashed var(--accent);outline-offset:6px}
 
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(10,4,32,.5);z-index:200;align-items:center;justify-content:center}
   .modal-bg.visible{display:flex}
@@ -335,6 +386,7 @@
   .modal-box::before{content:'▓ HELP.exe  □ ×';position:absolute;top:0;left:0;right:0;height:30px;background:linear-gradient(180deg,var(--accent-cyan),var(--accent-cyan-2));border-bottom:2px solid var(--border);color:var(--border);font-family:var(--font-pixel);font-size:11px;padding:10px 12px;box-sizing:border-box;letter-spacing:1.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
   .modal-box h2{font-family:var(--font-pixel);font-weight:400;font-size:18px;color:var(--accent);margin-bottom:18px;letter-spacing:1px}
   .modal-box p{font-family:var(--font-ui);font-size:16px;color:var(--ink);line-height:1.7}
+  .modal-box .help-body{max-height:62vh;overflow-y:auto;padding-right:6px}
   .modal-box kbd{background:var(--accent-yellow);border:2px solid var(--border);border-radius:0;padding:1px 8px;font-family:var(--font-ui);font-size:14px;color:var(--ink);box-shadow:1px 1px 0 var(--border)}
   /* SVG-bibliotheek modal */
   .modal-box.svglib{max-width:900px;width:94%}
@@ -414,6 +466,8 @@
   body.classic .slide-thumb .num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;text-shadow:none}
   body.classic .slide-thumb .info .title{font-family:'Outfit',sans-serif;font-size:13px}
   body.classic .slide-thumb .info .sub{font-family:'Outfit',sans-serif;font-size:10px}
+  body.classic .thumb-frame{border-width:1px;border-radius:4px}
+  body.classic .slide-thumb .thumb-actions button{border-width:1px;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.15);font-family:'Outfit',sans-serif;font-size:12px}
   body.classic #sidebar-actions{background:transparent;border-top:1px solid var(--border)}
   body.classic .sidebar-btn{background:none;border:1px dashed var(--border);border-radius:6px;color:var(--ink-light);font-family:'Outfit',sans-serif;font-size:12px;box-shadow:none;letter-spacing:normal}
   body.classic .sidebar-btn:hover{background:none;border-color:var(--accent);color:var(--accent);transform:none;box-shadow:none}
@@ -501,9 +555,23 @@
   body.classic .path-item .path-label.highlighted{background:rgba(184,96,42,.15)}
   body.classic .path-item .visibility-btn{border-width:1px;border-radius:4px;box-shadow:none}
   body.classic .path-item .visibility-btn:hover{background:none;border-color:var(--accent)}
-  body.classic #add-content-dropdown{background:var(--canvas-bg);border-width:1px;border-radius:6px;padding:4px 0;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:140px}
-  body.classic #add-content-dropdown button{background:none;border-bottom:none;font-family:'Outfit',sans-serif;font-size:12px}
-  body.classic #add-content-dropdown button:hover{background:rgba(184,96,42,.06);color:var(--accent)}
+  body.classic .menu-dropdown{background:var(--canvas-bg);border-width:1px;border-radius:6px;padding:4px 0;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:170px}
+  body.classic .menu-dropdown button{background:none;border-bottom:none;font-family:'Outfit',sans-serif;font-size:12px}
+  body.classic .menu-dropdown button:hover,body.classic .menu-dropdown button:focus-visible{background:rgba(184,96,42,.06);color:var(--accent)}
+  body.classic .menu-dropdown kbd{font-family:'Outfit',sans-serif;font-size:10px;color:#aaa}
+  body.classic .split-btn .t-btn.primary:first-child{border-radius:5px 0 0 5px;border-right:1px solid rgba(255,255,255,.35)}
+  body.classic .split-btn .split-arrow{border-radius:0 5px 5px 0;border-left:none}
+  body.classic #speed-val{font-family:'Outfit',sans-serif;font-size:11px;color:var(--ink-light)}
+  body.classic #doc-status{font-size:11px!important;border-top:1px solid var(--border);color:var(--ink-light)}
+  body.classic #doc-status.dirty::before{color:var(--accent)}
+  body.classic .toast{border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.1);font-family:'Outfit',sans-serif;font-size:13px}
+  body.classic .toast.ok{border-left-color:#4a9a6a}
+  body.classic .toast.warn{border-left-color:#d9a400}
+  body.classic .toast.error{border-left-color:#c44}
+  body.classic .dialog-input{border-width:1px;border-radius:6px;box-shadow:none;font-family:'Outfit',sans-serif;font-size:13px;padding:10px 14px}
+  body.classic .dialog-input:focus{box-shadow:none;border-color:var(--accent)}
+  body.classic .dialog-hint{font-family:'Outfit',sans-serif;font-size:12px}
+  body.classic #preview-wrap.drop-target{outline:2px dashed var(--accent)}
   body.classic #present-counter{font-family:'Outfit',sans-serif;font-size:11px;color:#ccc;letter-spacing:1px}
   body.classic #present-controls button{border-width:1px;border-radius:5px;box-shadow:none;font-family:'Outfit',sans-serif;font-size:11px;background:none;color:#bbb;border-color:#ddd}
   body.classic #present-controls button:hover{background:none;border-color:var(--accent);color:var(--accent);transform:none;box-shadow:none}
@@ -526,11 +594,11 @@
 
 <div id="editor">
   <div id="sidebar">
-    <div id="sidebar-header"><h1>One <span>Line</span> Color</h1><p>One line art presentaties met kleur</p></div>
-    <div id="slide-list"></div>
+    <div id="sidebar-header"><h1>One <span>Line</span> Color</h1><p>One line art presentaties met kleur</p><p id="doc-status" title="">Nieuwe presentatie</p></div>
+    <div id="slide-list" aria-label="Dia's"></div>
     <div id="sidebar-actions">
-      <button class="sidebar-btn" onclick="addSlide()">+ Nieuwe dia</button>
-      <button class="sidebar-btn" onclick="showHelp()">Hoe werkt het?</button>
+      <button class="sidebar-btn" onclick="addSlide()" title="Nieuwe dia toevoegen na de huidige">+ Nieuwe dia</button>
+      <button class="sidebar-btn" onclick="showHelp()">Hoe werkt het? <span class="kbd-hint">F1</span></button>
       <div class="style-switch" onclick="toggleAppStyle()" title="Wissel tussen Y2K en klassieke stijl">
         <span class="ss-label ss-left">Klassiek</span>
         <span class="ss-track"><span class="ss-thumb"></span></span>
@@ -540,37 +608,46 @@
   </div>
   <div id="main-area">
     <div id="toolbar">
-      <input type="text" class="t-input" id="slide-title-input" placeholder="Diatitel...">
-      <div class="t-sep"></div>
-      <div class="speed-group"><label>Tekensnelheid</label><input type="range" id="speed-range" min="1" max="10" value="3"></div>
-      <div class="t-sep"></div>
+      <div class="menu-wrap" id="file-menu-wrap">
+        <button class="t-btn" id="file-menu-btn" onclick="toggleMenu('file-menu')" aria-haspopup="true">Bestand ▾</button>
+        <div class="menu-dropdown" id="file-menu" role="menu">
+          <button role="menuitem" onclick="newPresentation()"><span>Nieuwe presentatie</span></button>
+          <button role="menuitem" onclick="openPresentation()"><span>Openen…</span><kbd>Ctrl+O</kbd></button>
+          <button role="menuitem" onclick="savePresentation(false)"><span>Opslaan</span><kbd>Ctrl+S</kbd></button>
+          <button role="menuitem" onclick="savePresentation(true)"><span>Opslaan als…</span><kbd>Ctrl+Shift+S</kbd></button>
+          <button role="menuitem" onclick="exportStandaloneHTML()"><span>Exporteer als HTML…</span></button>
+        </div>
+      </div>
+      <button class="t-btn" id="undo-btn" onclick="undoHistory()" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken" disabled>↶</button>
+      <button class="t-btn" id="redo-btn" onclick="redoHistory()" title="Opnieuw (Ctrl+Y)" aria-label="Opnieuw" disabled>↷</button>
+      <span class="t-sep"></span>
+      <input type="text" class="t-input" id="slide-title-input" placeholder="Diatitel..." title="Titel van deze dia">
       <span class="t-sep"></span>
       <span class="t-color-label">Achtergrond</span>
       <div class="color-palette-wrap"><input type="color" id="bg-color-input" value="#ffffff" title="Achtergrondkleur"><button class="color-palette-btn" onclick="toggleColorPalette(this,'bg-color-input')" title="Opgeslagen kleuren">▾</button><div class="color-palette-popup" data-target="bg-color-input"></div></div>
       <span class="t-color-label">Lijn</span>
       <div class="color-palette-wrap"><input type="color" id="line-color-input" value="#1a1a1a" title="Standaard lijnkleur"><button class="color-palette-btn" onclick="toggleColorPalette(this,'line-color-input')" title="Opgeslagen kleuren">▾</button><div class="color-palette-popup" data-target="line-color-input"></div></div>
       <span class="t-sep"></span>
-      <button class="t-btn" id="undo-btn" onclick="undoHistory()" title="Ongedaan maken (Ctrl+Z)" disabled>↶</button>
-      <button class="t-btn" id="redo-btn" onclick="redoHistory()" title="Opnieuw (Ctrl+Y)" disabled>↷</button>
-      <span class="t-sep"></span>
-      <button class="t-btn" onclick="exportJSON()" title="Opslaan als bestand (Ctrl+S)">Opslaan</button>
-      <button class="t-btn" onclick="importJSON()">Laden</button>
-      <span class="t-sep"></span>
       <button class="t-btn" onclick="openSvgLibrary()" title="Kies one-line-art uit de ingebouwde bibliotheek">◫ Bibliotheek</button>
-      <span class="t-sep"></span>
-      <div id="add-content-wrap">
-        <button class="t-btn" id="add-content-btn" onclick="toggleAddMenu()">+ Toevoegen ▾</button>
-        <div id="add-content-dropdown">
-          <button onclick="addTextBlock();closeAddMenu()">Tekst</button>
-          <button onclick="addImageBlock();closeAddMenu()">Afbeelding</button>
-          <button onclick="addLocalVideo();closeAddMenu()">Video</button>
-          <button onclick="addYouTubeBlock();closeAddMenu()">YouTube</button>
-          <button onclick="showOneLineTextDialog();closeAddMenu()">Tekst als pad</button>
+      <div class="menu-wrap" id="add-content-wrap">
+        <button class="t-btn" id="add-content-btn" onclick="toggleAddMenu()" aria-haspopup="true">+ Toevoegen ▾</button>
+        <div class="menu-dropdown" id="add-content-dropdown" role="menu">
+          <button role="menuitem" onclick="addTextBlock();closeAddMenu()"><span>Tekst</span></button>
+          <button role="menuitem" onclick="addImageBlock();closeAddMenu()"><span>Afbeelding</span></button>
+          <button role="menuitem" onclick="addLocalVideo();closeAddMenu()"><span>Video</span></button>
+          <button role="menuitem" onclick="addYouTubeBlock();closeAddMenu()"><span>YouTube</span></button>
+          <button role="menuitem" onclick="showOneLineTextDialog();closeAddMenu()"><span>Tekst als pad</span></button>
         </div>
       </div>
-      <span class="t-sep"></span>
-      <button class="t-btn" onclick="exportStandaloneHTML()">Exporteer HTML</button>
-      <button class="t-btn primary" onclick="startPresentation()">Presenteren ▸</button>
+      <span class="t-spacer"></span>
+      <div class="menu-wrap split-btn" id="present-menu-wrap">
+        <button class="t-btn primary" onclick="startPresentation(0)" title="Presenteren vanaf het begin (F5)">Presenteren ▸</button><button class="t-btn primary split-arrow" onclick="toggleMenu('present-menu')" title="Meer manieren om te presenteren" aria-label="Meer presentatie-opties" aria-haspopup="true">▾</button>
+        <div class="menu-dropdown align-right" id="present-menu" role="menu">
+          <button role="menuitem" onclick="closeAllMenus();startPresentation(0)"><span>Vanaf het begin</span><kbd>F5</kbd></button>
+          <button role="menuitem" onclick="closeAllMenus();startPresentationHere()"><span>Vanaf deze dia</span><kbd>Shift+F5</kbd></button>
+          <div class="menu-row speed-group" title="Hoe snel de lijn zich tekent tijdens het presenteren (1 = langzaam, 10 = snel)"><label for="speed-range">Tekensnelheid</label><input type="range" id="speed-range" min="1" max="10" value="3"><span id="speed-val">3</span></div>
+        </div>
+      </div>
     </div>
     <div id="canvas-area">
       <div id="preview-wrap">
@@ -578,7 +655,7 @@
         <div id="upload-zone">
           <div class="upload-icon">+</div>
           <div class="upload-text"><strong>Sleep een SVG hierheen</strong></div>
-          <div class="upload-hint">SVG met één of meerdere paden</div>
+          <div class="upload-hint">SVG met één of meerdere paden · afbeeldingen en video's kun je ook slepen of plakken (Ctrl+V)</div>
           <div class="upload-actions">
             <button class="t-btn primary" onclick="openSvgLibrary()">◫ Kies uit bibliotheek</button>
             <button class="t-btn" onclick="pickSvgFile()">⤓ Eigen SVG…</button>
@@ -670,17 +747,17 @@
 <div class="modal-bg" id="help-modal" onclick="this.classList.remove('visible')">
   <div class="modal-box" onclick="event.stopPropagation()">
     <h2>Hoe werkt One Line Color?</h2>
+    <div class="help-body">
     <p>
-      <strong>1. Kies of upload een SVG</strong> — Kies een afbeelding uit de ingebouwde <strong>Bibliotheek</strong>, of sleep/kies een eigen SVG per dia. Meerdere paden worden herkend. Met <strong>×</strong> haal je een afbeelding uit de bibliotheek; via <strong>↺ Verwijderde</strong> zet je hem terug.<br><br>
+      <strong>1. Kies of upload een SVG</strong> — Kies een afbeelding uit de ingebouwde <strong>Bibliotheek</strong>, of sleep een eigen SVG op het canvas. Meerdere paden worden herkend. Met <strong>×</strong> haal je een afbeelding uit de bibliotheek; via <strong>↺ Verwijderde</strong> zet je hem terug.<br><br>
       <strong>2. Kleuren instellen</strong> — Achtergrondkleur, lijnkleur per pad, ondertitel- en tekstkleuren. Maak paden transparant (onzichtbaar tekenen) via het pad-paneel.<br><br>
-      <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekst blokken, afbeeldingen en video's (ook YouTube). Alles vrij positioneerbaar en schaalbaar. Bij <em>Tekst als pad</em> krijgen cijfers vanzelf een mini-spatie, en meerdere tekstpaden op een dia schrijft de pen snel na elkaar, zonder zichtbare lijn ertussen.<br><br>
-      <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Media verschijnt na het tekenen.<br><br>
-      <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>PgDn</kbd> <kbd>Klik</kbd> — Volgende &nbsp;
-      <kbd>←</kbd> <kbd>PgUp</kbd> — Vorige &nbsp;
-      <kbd>Esc</kbd> — Stop<br><br>
-      <strong>Bewerken</strong> — <kbd>Ctrl+Z</kbd> ongedaan maken &nbsp; <kbd>Ctrl+Y</kbd> opnieuw &nbsp; <kbd>Ctrl+S</kbd> opslaan &nbsp; <kbd>Delete</kbd> blok verwijderen.
-      Wijzigingen worden ook automatisch bewaard: sluit je zonder op te slaan, dan biedt de app bij de volgende start herstel aan.
-    </p><br>
+      <strong>3. Bouw je presentatie</strong> — Titels, ondertitels, tekstblokken, afbeeldingen en video's (ook YouTube). Sleep of plak (<kbd>Ctrl+V</kbd>) afbeeldingen, video's of tekst direct op het canvas. Bij <em>Tekst als pad</em> krijgen cijfers vanzelf een mini-spatie, en met <strong>+</strong> links en rechts teken je een lijn die vloeiend in de tekst overloopt.<br><br>
+      <strong>4. Presenteer</strong> — De lijn tekent zich op en vloeit natuurlijk naar de volgende dia. Kies <em>Presenteren ▾</em> om vanaf de huidige dia te beginnen of de tekensnelheid in te stellen.<br><br>
+      <strong>Bestand</strong> — <kbd>Ctrl+S</kbd> opslaan (daarna direct in hetzelfde bestand) &nbsp; <kbd>Ctrl+Shift+S</kbd> opslaan als &nbsp; <kbd>Ctrl+O</kbd> openen. Je kunt ook een <em>.json</em>-presentatie op het venster slepen. Wijzigingen worden automatisch bewaard: sluit je zonder op te slaan, dan biedt de app bij de volgende start herstel aan.<br><br>
+      <strong>Bewerken</strong> — <kbd>Ctrl+Z</kbd> ongedaan maken &nbsp; <kbd>Ctrl+Y</kbd> opnieuw &nbsp; <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> blok kopiëren en plakken (ook naar een andere dia) &nbsp; <kbd>Ctrl+D</kbd> dupliceren &nbsp; <kbd>Delete</kbd> verwijderen &nbsp; <kbd>pijltjes</kbd> blok verschuiven (met <kbd>Shift</kbd> per 10) &nbsp; <kbd>Esc</kbd> deselecteren &nbsp; <kbd>PgUp</kbd>/<kbd>PgDn</kbd> vorige/volgende dia.<br><br>
+      <strong>Presenteren</strong> — <kbd>F5</kbd> vanaf het begin &nbsp; <kbd>Shift+F5</kbd> vanaf deze dia &nbsp; <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> volgende &nbsp; <kbd>←</kbd> vorige &nbsp; <kbd>Home</kbd>/<kbd>End</kbd> eerste/laatste dia &nbsp; <kbd>3</kbd> <kbd>Enter</kbd> naar dia 3 &nbsp; <kbd>B</kbd>/<kbd>W</kbd> zwart/wit scherm &nbsp; <kbd>F</kbd> volledig scherm &nbsp; <kbd>Esc</kbd> stoppen. Op een tablet: vegen.
+    </p>
+    </div><br>
     <button class="t-btn" onclick="document.getElementById('help-modal').classList.remove('visible')">Sluiten</button>
   </div>
 </div>
@@ -699,6 +776,7 @@
   </div>
 </div>
 
+<div id="toast-wrap" aria-live="polite"></div>
 <input type="file" id="svg-file-input" accept=".svg" style="display:none">
 <input type="file" id="json-file-input" accept=".json" style="display:none">
 <input type="file" id="image-file-input" accept=".png,.jpg,.jpeg,.gif,.svg,.webp" style="display:none">
@@ -721,17 +799,24 @@
 const presentHost={
   drawSpeed:()=>3,      // tekensnelheid 1..10
   isActive:()=>false,   // reageren toetsen/klikken nu op de presentatie?
-  onEnd:()=>{},         // na de laatste dia
-  onEscape:()=>{}       // Esc-toets
+  onEnd:()=>{},         // klik/toets op het eindscherm na de laatste dia
+  onEscape:()=>{},      // Esc-toets
+  endHint:''            // uitleg onder "Einde van de presentatie"
 };
 let pIdx=-1,pAnimating=false,pCancel=null,pCanvas=null,pCtx=null;
 let pSlidePoints=[];
 let pViewport={slideW:1920,slideH:1080,slideStride:1920*1.5,scale:1,padX:0,padY:0};
 let pBgColor='#ffffff';
 let pTargetScrollX=0,pOverlayScrollFrom=0;
+// pStartIdx: dia waarmee de presentatie begon (presenteren vanaf een dia).
+// pHasShown: is er al een dia getoond? De eerste dia tekent zonder overgang.
+let pStartIdx=0,pHasShown=false;
+let pEndShown=false,pEndEl=null,pBlank=null,pBlankEl=null,pCursorTimer=null;
+let pJumpBuf='',pJumpTimer=null;
 window._drawnPoints=[];
 
-function escHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escHTML(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+const YT_ID_RE=/^[A-Za-z0-9_-]{11}$/;
 
 // Determine if a color is light or dark for contrast
 function isLightColor(hex){
@@ -861,11 +946,13 @@ function addNewSlideOverlays(idx){
   showText(idx);
   // Wrap new elements in offset containers (preserves exact layout, only shifts the container)
   const newTbWrap=document.createElement('div');
+  newTbWrap.className='p-new-slide';
   newTbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
   newTbWrap._g={kind:'shift',strides:1};placePresentOverlay(newTbWrap);
   while(tbContainer.firstChild)newTbWrap.appendChild(tbContainer.firstChild);
   tbContainer.appendChild(newTbWrap);
   const newMbWrap=document.createElement('div');
+  newMbWrap.className='p-new-slide';
   newMbWrap.style.cssText='position:absolute;inset:0;pointer-events:none';
   newMbWrap._g={kind:'shift',strides:1};placePresentOverlay(newMbWrap);
   while(mbContainer.firstChild)newMbWrap.appendChild(mbContainer.firstChild);
@@ -874,18 +961,65 @@ function addNewSlideOverlays(idx){
   tbContainer.appendChild(oldTbFrag);
   mbContainer.appendChild(oldMbFrag);
 }
-// After transition: clean up and re-render at normal positions
-function finalizeSlideOverlays(idx){
+// Na de overgang: de oude elementen weghalen en de nieuwe uit hun verschoven
+// container halen. Zonder ze opnieuw aan te maken: een video of YouTube-film
+// die al tijdens het tekenen liep, speelt zo gewoon door.
+// rerender=true (terugbladeren/springen): de dia opnieuw opbouwen.
+function finalizeSlideOverlays(idx,rerender){
   pOverlayScrollFrom=pTargetScrollX;
   document.getElementById('present-overlays').style.transform='';
   // Hide #present-title and #present-subtitle (now rendered as text blocks)
   document.getElementById('present-title').classList.remove('visible');
   document.getElementById('present-subtitle').classList.remove('visible');
-  showText(idx);
+  if(rerender){stopPresentMediaBlocks();showText(idx);}
+  else{
+    ['present-textblocks','present-media'].forEach(id=>{
+      const c=document.getElementById(id);
+      const wrap=c.querySelector(':scope > .p-new-slide');
+      if(!wrap)return;
+      [...c.children].forEach(ch=>{
+        if(ch===wrap)return;
+        ch.querySelectorAll&&ch.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
+        ch.remove();
+      });
+      while(wrap.firstChild)c.appendChild(wrap.firstChild);
+      wrap.remove();
+    });
+    positionTextOverlays();
+  }
   renderFrame(pTargetScrollX);
 }
 
+function applySlideBg(idx){
+  pBgColor=(slides[idx]&&slides[idx].bgColor)||'#ffffff';
+  document.getElementById('presenter').style.background=pBgColor;
+  if(pCanvas)pCanvas.style.background=pBgColor;
+}
+function updatePresentCounter(){
+  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
+}
+
+// Start (of herstart) de presentatie bij dia startIdx. De host zet vooraf
+// slides, pSlidePoints, pCanvas/pCtx en pViewport klaar.
+function pBegin(startIdx){
+  if(pCancel){pCancel();pCancel=null;}
+  pStartIdx=Math.max(0,Math.min(slides.length-1,startIdx|0));
+  pIdx=pStartIdx-1;pHasShown=false;pAnimating=false;
+  window._drawnPoints=[];
+  pTargetScrollX=pStartIdx*pViewport.slideStride;pOverlayScrollFrom=pTargetScrollX;
+  hideEndScreen();setBlank(null);
+  document.getElementById('present-overlays').style.transform='';
+  document.getElementById('present-textblocks').innerHTML='';
+  stopPresentMediaBlocks();
+  try{window.getSelection().removeAllRanges();}catch(e){}
+  applySlideBg(pStartIdx);
+  pWakeCursor();
+  pNext();
+}
+
 function pNext(){
+  if(pBlank){setBlank(null);return;}
+  if(pEndShown){presentHost.onEnd();return;}
   if(pAnimating){
     // Skip animation: complete current slide instantly
     if(pCancel){pCancel();pCancel=null;}
@@ -895,39 +1029,103 @@ function pNext(){
     pAnimating=false;
     return;
   }
-  if(pIdx+1>=slides.length){presentHost.onEnd();return;}
+  if(pIdx+1>=slides.length){showEndScreen();return;}
   pIdx++;
+  const first=!pHasShown;pHasShown=true;
   pAnimating=true;
   pTargetScrollX=pIdx*pViewport.slideStride;
-  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
-  // Update background color for this slide
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;
-  pCanvas.style.background=pBgColor;
-  // Add new slide's overlays offset to the right (old content stays in place)
-  addNewSlideOverlays(pIdx);
-  if(pIdx===0)animateDrawSlide(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
-  else animateTransitionAndDraw(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
+  updatePresentCounter();
+  applySlideBg(pIdx);
+  if(first){
+    // Eerste dia: geen camerabeweging, dus tekst en media meteen (zacht) tonen
+    // in plaats van pas nadat de lijn klaar is.
+    pOverlayScrollFrom=pTargetScrollX;
+    showText(pIdx);
+    document.querySelectorAll('#present-textblocks > *, #present-media > *').forEach(el=>{
+      if(!el.animate)return;
+      const to=getComputedStyle(el).opacity;
+      el.animate([{opacity:0},{opacity:to}],{duration:700,easing:'ease-out'});
+    });
+    animateDrawSlide(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
+  }else{
+    // Add new slide's overlays offset to the right (old content stays in place)
+    addNewSlideOverlays(pIdx);
+    animateTransitionAndDraw(pIdx,()=>{finalizeSlideOverlays(pIdx);pAnimating=false;});
+  }
 }
 
 function pPrev(){
+  if(pBlank){setBlank(null);return;}
+  if(pEndShown){hideEndScreen();return;}
+  const wasAnimating=pAnimating;
   if(pAnimating){
     if(pCancel){pCancel();pCancel=null;}
     pAnimating=false;
   }
-  if(pIdx<=0)return;pIdx--;
-  pBgColor=slides[pIdx].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;
-  pCanvas.style.background=pBgColor;
-  rebuildTo(pIdx);
-  pTargetScrollX=pIdx*pViewport.slideStride;
-  document.getElementById('present-counter').textContent=`${pIdx+1} / ${slides.length}`;
-  finalizeSlideOverlays(pIdx);
+  if(pIdx<=0){if(wasAnimating&&pIdx===0)pGoTo(0);return;}
+  pGoTo(pIdx-1);
+}
+
+// Spring direct naar een dia (terugbladeren, Home/End, nummer + Enter): de
+// dia staat er meteen helemaal, zonder tekenanimatie.
+function pGoTo(idx){
+  if(!slides.length)return;
+  idx=Math.max(0,Math.min(slides.length-1,idx|0));
+  if(pCancel){pCancel();pCancel=null;}
+  pAnimating=false;
+  hideEndScreen();setBlank(null);
+  if(idx<pStartIdx)pStartIdx=0;
+  pHasShown=true;
+  pIdx=idx;
+  applySlideBg(idx);
+  rebuildTo(idx);
+  pTargetScrollX=idx*pViewport.slideStride;
+  updatePresentCounter();
+  finalizeSlideOverlays(idx,true);
+}
+
+// Eindscherm na de laatste dia, zodat één klik te veel de presentatie niet
+// meteen afsluit. Nog een klik/toets: presentHost.onEnd().
+function showEndScreen(){
+  if(!pEndEl){
+    pEndEl=document.createElement('div');
+    pEndEl.id='present-end';
+    pEndEl.style.cssText='position:fixed;inset:0;z-index:150;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#0b0b0b;color:#fff;font-family:Outfit,sans-serif;text-align:center;opacity:0;transition:opacity .5s;cursor:pointer;padding:24px';
+    document.getElementById('presenter').appendChild(pEndEl);
+  }
+  pEndEl.innerHTML='<div style="font-size:30px;font-weight:300;letter-spacing:4px">Einde van de presentatie</div>'+
+    (presentHost.endHint?'<div style="font-size:14px;color:#9a9a9a;letter-spacing:1px">'+escHTML(presentHost.endHint)+'</div>':'');
+  pEndEl.style.display='flex';
+  requestAnimationFrame(()=>{if(pEndEl)pEndEl.style.opacity='1';});
+  pEndShown=true;
+}
+function hideEndScreen(){
+  if(pEndEl){pEndEl.style.display='none';pEndEl.style.opacity='0';}
+  pEndShown=false;
+}
+// Zwart (B) of wit (W) scherm, zoals in PowerPoint: nogmaals of een andere
+// toets haalt het weer weg.
+function setBlank(color){
+  if(!color||pBlank===color){if(pBlankEl)pBlankEl.style.display='none';pBlank=null;return;}
+  if(!pBlankEl){
+    pBlankEl=document.createElement('div');
+    pBlankEl.style.cssText='position:fixed;inset:0;z-index:140;display:none';
+    document.getElementById('presenter').appendChild(pBlankEl);
+  }
+  pBlankEl.style.background=color;pBlankEl.style.display='block';pBlank=color;
+}
+// Muiscursor verbergen als hij even stilstaat
+function pWakeCursor(){
+  const pr=document.getElementById('presenter');if(!pr)return;
+  pr.style.cursor='';
+  clearTimeout(pCursorTimer);
+  pCursorTimer=setTimeout(()=>{if(presentHost.isActive())pr.style.cursor='none';},2500);
 }
 
 function rebuildTo(idx){
   window._drawnPoints=[];
-  for(let i=0;i<=idx;i++){
+  // Vanaf de startdia: dia's daarvoor zijn (nog) niet getekend
+  for(let i=(idx>=pStartIdx?pStartIdx:0);i<=idx;i++){
     const pts=pSlidePoints[i];if(!pts||!pts.length)continue;
     if(window._drawnPoints.length>0){
       const prevPts=pSlidePoints[i-1]||[];
@@ -1043,6 +1241,7 @@ function showPresentMediaBlocks(idx){
   const s=slides[idx];
   if(!s.mediaBlocks||!s.mediaBlocks.length)return;
   s.mediaBlocks.filter(mb=>mb.type!=='svgtext').forEach(mb=>{
+    if(mb.type==='youtube'&&!YT_ID_RE.test(mb.src||''))return;
     const el=document.createElement('div');
     el.className='present-media';
     el._g={kind:'media',x:mb.x,y:mb.y,w:mb.width,h:mb.height};placePresentOverlay(el);
@@ -1050,10 +1249,10 @@ function showPresentMediaBlocks(idx){
     el.style.zIndex=101+(mb.zOrder||0);
     if(mb.rotation)el.style.transform=`rotate(${mb.rotation}deg)`;
     if(mb.type==='image'){
-      el.innerHTML=`<img src="${mb.src}">`;
+      el.innerHTML=`<img src="${escHTML(mb.src)}" alt="">`;
     } else if(mb.type==='video'){
       const autoplay=mb.autoplay!==false;
-      el.innerHTML=`<video src="${mb.src}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
+      el.innerHTML=`<video src="${escHTML(mb.src)}" ${autoplay?'autoplay':''} muted loop playsinline></video>`;
     } else if(mb.type==='youtube'){
       el.style.pointerEvents='auto';
       el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();playPresentYouTube(this,'${mb.src}')"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
@@ -1280,13 +1479,52 @@ function animateDrawSlide(slideIdx,done){
 }
 
 // Controls
+// → Spatie PgDn Enter ↓ = volgende · ← PgUp Backspace ↑ = vorige ·
+// Home/End = eerste/laatste dia · nummer + Enter = naar die dia ·
+// B/. = zwart scherm · W/, = wit scherm · F = volledig scherm · Esc = stoppen
 document.addEventListener('keydown',e=>{
   if(!presentHost.isActive())return;
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();pNext();}
-  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();pPrev();}
-  if(e.key==='Escape')presentHost.onEscape(e);
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key;
+  if(/^[0-9]$/.test(k)){
+    pJumpBuf=(pJumpBuf+k).slice(-3);
+    clearTimeout(pJumpTimer);pJumpTimer=setTimeout(()=>{pJumpBuf='';},1500);
+    return;
+  }
+  if(k==='Enter'&&pJumpBuf){
+    e.preventDefault();
+    const n=parseInt(pJumpBuf,10);pJumpBuf='';clearTimeout(pJumpTimer);
+    if(n>=1&&n<=slides.length)pGoTo(n-1);
+    return;
+  }
+  if(k==='ArrowRight'||k===' '||k==='PageDown'||k==='Enter'||k==='ArrowDown'){e.preventDefault();pNext();}
+  else if(k==='ArrowLeft'||k==='PageUp'||k==='Backspace'||k==='ArrowUp'){e.preventDefault();pPrev();}
+  else if(k==='Home'){e.preventDefault();pGoTo(0);}
+  else if(k==='End'){e.preventDefault();pGoTo(slides.length-1);}
+  else if(k==='b'||k==='B'||k==='.'){e.preventDefault();setBlank('#000');}
+  else if(k==='w'||k==='W'||k===','){e.preventDefault();setBlank('#fff');}
+  else if(k==='f'||k==='F'){e.preventDefault();toggleFullscreen();}
+  else if(k==='Escape'){if(pBlank)setBlank(null);else presentHost.onEscape(e);}
 });
-document.getElementById('presenter').addEventListener('click',e=>{if(e.target.closest('#present-controls')||e.target.closest('.yt-thumb')||e.target.closest('iframe'))return;pNext();});
+(function(){
+  const presenter=document.getElementById('presenter');
+  let touchX=null,touchY=null,swipedAt=0;
+  presenter.addEventListener('click',e=>{
+    if(Date.now()-swipedAt<500)return;
+    // Knoppen: daarna de focus weghalen, anders 'klikt' de spatiebalk ze nog eens
+    if(e.target.closest('#present-controls')){const b=e.target.closest('button');if(b)b.blur();return;}
+    if(e.target.closest('.yt-thumb')||e.target.closest('.yt-player')||e.target.closest('.yt-error')||e.target.closest('iframe'))return;
+    pNext();
+  });
+  presenter.addEventListener('mousemove',()=>{if(presentHost.isActive())pWakeCursor();});
+  // Vegen op een tablet of telefoon: naar links = volgende, naar rechts = vorige
+  presenter.addEventListener('touchstart',e=>{if(e.touches.length===1){touchX=e.touches[0].clientX;touchY=e.touches[0].clientY;}else touchX=null;},{passive:true});
+  presenter.addEventListener('touchend',e=>{
+    if(touchX===null||!presentHost.isActive())return;
+    const t=e.changedTouches[0],dx=t.clientX-touchX,dy=t.clientY-touchY;touchX=null;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5){swipedAt=Date.now();if(dx<0)pNext();else pPrev();}
+  });
+})();
 </script>
 
 <script>
@@ -1308,9 +1546,99 @@ function toggleAppStyle(){
 })();
 
 // ============================================================
+// MELDINGEN, DIALOGEN EN MENU'S
+// ============================================================
+// Korte melding rechtsonder (verdwijnt vanzelf; klik = wegklikken).
+// type: info | ok | warn | error. ms=0: blijft staan tot close().
+function showToast(msg,type,ms){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className='toast '+(type||'info');
+  el.setAttribute('role',type==='error'||type==='warn'?'alert':'status');
+  el.textContent=msg;
+  let timer=null;
+  const close=()=>{clearTimeout(timer);if(!el.isConnected)return;el.classList.add('out');setTimeout(()=>el.remove(),250);};
+  el.addEventListener('click',close);
+  if(wrap){wrap.appendChild(el);while(wrap.children.length>4)wrap.firstChild.remove();}
+  if(ms!==0)timer=setTimeout(close,ms||(type==='error'||type==='warn'?6000:3000));
+  return{close,el};
+}
+// Dialoogvenster in de stijl van de app (vervangt alert/confirm/prompt).
+// opts: title, message, buttons:[{label,value,primary}], input:{value,placeholder},
+//       onInput(value)->hinttekst, validate(value)->foutmelding of ''.
+// Geeft een Promise: de value van de gekozen knop (of opts.cancelValue bij
+// Esc / klik ernaast). Met input: {button, value}.
+function appDialog(opts){
+  return new Promise(resolve=>{
+    const prevFocus=document.activeElement;
+    const bg=document.createElement('div');bg.className='modal-bg visible app-dialog';
+    const box=document.createElement('div');box.className='modal-box dialog-box';
+    box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+    if(opts.kind)box.dataset.kind=opts.kind;
+    const h=document.createElement('h2');h.textContent=opts.title||'';box.appendChild(h);
+    if(opts.message){const p=document.createElement('p');p.className='dialog-msg';p.textContent=opts.message;box.appendChild(p);}
+    let input=null,hint=null;
+    if(opts.input){
+      input=document.createElement('input');input.type='text';input.className='dialog-input';
+      input.value=opts.input.value||'';input.placeholder=opts.input.placeholder||'';input.spellcheck=false;
+      box.appendChild(input);
+      hint=document.createElement('div');hint.className='dialog-hint';box.appendChild(hint);
+      const upd=()=>{hint.classList.remove('error');hint.textContent=opts.onInput?opts.onInput(input.value)||'':'';};
+      input.addEventListener('input',upd);upd();
+    }
+    const row=document.createElement('div');row.className='dialog-actions';
+    const buttons=opts.buttons||[{label:'OK',value:true,primary:true}];
+    const cancelValue=('cancelValue' in opts)?opts.cancelValue:(buttons.find(b=>b.value==='cancel')?'cancel':null);
+    const finish=v=>{
+      document.removeEventListener('keydown',onKey,true);
+      bg.remove();
+      try{if(prevFocus&&prevFocus.focus&&prevFocus.isConnected)prevFocus.focus();}catch(e){}
+      resolve(input?{button:v,value:input.value}:v);
+    };
+    const choose=b=>{
+      if(input&&b.primary&&opts.validate){const err=opts.validate(input.value);if(err){hint.textContent=err;hint.classList.add('error');input.focus();return;}}
+      finish(b.value);
+    };
+    buttons.forEach(b=>{
+      const btn=document.createElement('button');btn.type='button';
+      btn.className='t-btn'+(b.primary?' primary':'');btn.textContent=b.label;
+      btn.addEventListener('click',()=>choose(b));
+      row.appendChild(btn);
+    });
+    box.appendChild(row);
+    bg.appendChild(box);
+    bg.addEventListener('mousedown',e=>{if(e.target===bg)finish(cancelValue);});
+    function onKey(e){
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(cancelValue);}
+      else if(e.key==='Enter'&&(input?e.target===input:true)){
+        const p=buttons.find(b=>b.primary);if(p){e.preventDefault();e.stopPropagation();choose(p);}
+      }
+    }
+    document.addEventListener('keydown',onKey,true);
+    document.body.appendChild(bg);
+    requestAnimationFrame(()=>{
+      if(input){input.focus();input.select();}
+      else{const p=row.querySelector('.primary')||row.querySelector('button');if(p)p.focus();}
+    });
+  });
+}
+function toggleMenu(id){
+  const m=document.getElementById(id);if(!m)return;
+  const wasOpen=m.classList.contains('open');
+  closeAllMenus();
+  if(!wasOpen)m.classList.add('open');
+}
+function closeAllMenus(){
+  document.querySelectorAll('.menu-dropdown.open,.color-palette-popup.open').forEach(p=>p.classList.remove('open'));
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.menu-wrap'))document.querySelectorAll('.menu-dropdown.open').forEach(p=>p.classList.remove('open'));
+});
+
+// ============================================================
 // FONTS
 // ============================================================
-const FONTS = ['Cormorant Garamond','Playfair Display','Lora','Merriweather','Source Serif 4','Outfit','Raleway','DM Sans'];
+const FONTS =['Cormorant Garamond','Playfair Display','Lora','Merriweather','Source Serif 4','Outfit','Raleway','DM Sans'];
 
 // ============================================================
 // DATA
@@ -1377,20 +1705,28 @@ document.querySelectorAll('#font-select option').forEach(opt=>{opt.style.fontFam
   FONTS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;o.style.fontFamily=`'${f}', serif`;sel.appendChild(o);});
 })();
 
-function addTextBlock(){
+// text: beginbtekst (bijv. geplakt); at: plek op de dia (canvascoördinaten)
+function addTextBlock(text,at){
   const s=slides[currentSlide];
   if(!s.textBlocks)s.textBlocks=[];
-  s.textBlocks.push({text:'Tekst',x:50,y:50,font:'Cormorant Garamond',size:80,bold:false,italic:false,align:'left',rotation:0,color:'#1a1a1a'});
-  selectedTB=s.textBlocks.length-1;selectedMB=null;
-  renderTextBlocks();renderMediaBlocks();showTbControls();hideMcControls();
-  // Immediately focus the new text block for editing
+  const t=(typeof text==='string'&&text)?text:'Tekst';
+  // Ruwe schatting van de afmetingen, om het blok rond het midden te zetten
+  const lines=t.split('\n'),size=80;
+  const w=Math.min(1600,Math.max(...lines.map(l=>l.length))*size*0.45+16),h=lines.length*size*1.25;
+  const p=placeBlock(s,w,h,at);
+  s.textBlocks.push({text:t,x:p.x,y:p.y,font:'Cormorant Garamond',size:size,bold:false,italic:false,align:'left',rotation:0,color:'#1a1a1a',zOrder:nextZOrder(s)});
+  const idx=s.textBlocks.length-1;
+  selectedTB=idx;selectedMB=null;
+  renderTextBlocks();renderMediaBlocks();showTbControls();hideMcControls();updateSlideList();
+  // Meteen de tekst selecteren zodat je kunt typen (alleen binnen het blok)
   requestAnimationFrame(()=>{
-    const overlays=document.querySelectorAll('.tb-overlay');
-    const newEl=overlays[overlays.length-1];
-    if(newEl){
-      const txt=newEl.querySelector('.tb-text');
-      if(txt){txt.focus();document.execCommand('selectAll',false,null);}
-    }
+    const el=document.querySelectorAll('#preview-wrap .tb-overlay')[idx];
+    const txt=el&&el.querySelector('.tb-text');
+    if(!txt||!txt.isConnected)return;
+    txt.focus();
+    if(document.activeElement!==txt)return;
+    const range=document.createRange();range.selectNodeContents(txt);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
   });
 }
 
@@ -1399,6 +1735,7 @@ function renderTextBlocks(){
   // Remove existing overlays and snap guides
   wrap.querySelectorAll('.tb-overlay,.snap-guide').forEach(el=>el.remove());
   const s=slides[currentSlide];
+  updateUploadZone();
   if(!s.textBlocks)return;
   const wrapW=wrap.clientWidth,wrapH=wrap.clientHeight;
   const scaleX=wrapW/1920,scaleY=wrapH/1080;
@@ -1440,13 +1777,28 @@ function renderTextBlocks(){
       startDragTB(e,idx,scaleX,scaleY);
     });
     // Update text on input — use innerText to preserve newlines
-    el.querySelector('.tb-text').addEventListener('input',e=>{
+    const txtEl=el.querySelector('.tb-text');
+    txtEl.addEventListener('input',e=>{
       s.textBlocks[idx].text=e.target.innerText;
+    });
+    // Plakken: alleen platte tekst (geen opmaak uit Word of een website)
+    txtEl.addEventListener('paste',e=>{
+      const t=e.clipboardData&&e.clipboardData.getData('text/plain');
+      if(t==null)return;
+      e.preventDefault();e.stopPropagation();
+      document.execCommand('insertText',false,t);
     });
     wrap.appendChild(el);
   });
 }
 
+// De grote "Sleep een SVG hierheen" alleen tonen op een helemaal lege dia
+// (anders ligt hij over tekst en media heen)
+function updateUploadZone(){
+  const s=slides[currentSlide];if(!s)return;
+  const has=(s.textBlocks&&s.textBlocks.length)||(s.mediaBlocks&&s.mediaBlocks.length);
+  document.getElementById('upload-zone').classList.toggle('has-blocks',!!has);
+}
 function selectTextBlock(idx){
   selectedTB=idx;selectedMB=null;
   renderTextBlocks();renderMediaBlocks();
@@ -1456,7 +1808,7 @@ function selectTextBlock(idx){
 function deleteTextBlock(idx){
   slides[currentSlide].textBlocks.splice(idx,1);
   selectedTB=null;
-  renderTextBlocks();hideTbControls();
+  renderTextBlocks();hideTbControls();updateSlideList();
 }
 
 function showTbControls(){
@@ -1512,11 +1864,8 @@ document.getElementById('tb-color-input').addEventListener('input',e=>{
 });
 
 // Add content dropdown
-function toggleAddMenu(){document.getElementById('add-content-dropdown').classList.toggle('open');}
+function toggleAddMenu(){toggleMenu('add-content-dropdown');}
 function closeAddMenu(){document.getElementById('add-content-dropdown').classList.remove('open');}
-document.addEventListener('click',e=>{
-  if(!e.target.closest('#add-content-wrap'))closeAddMenu();
-});
 
 // ============================================================
 // MEDIA BLOCK LOGIC
@@ -1548,8 +1897,8 @@ function extractYouTubeID(url){
   // Handle various YouTube URL formats
   const patterns=[
     /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/(?:embed|v|shorts)\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?(?:.*&)?v=)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube(?:-nocookie)?\.com\/(?:embed|v|shorts|live)\/)([a-zA-Z0-9_-]{11})/,
     /^([a-zA-Z0-9_-]{11})$/ // bare video ID
   ];
   for(const p of patterns){const m=url.match(p);if(m)return m[1];}
@@ -1560,89 +1909,97 @@ function extractYouTubeID(url){
 let penToolActive=false, penToolMbIdx=-1, penToolSide='', penToolPoints=[];
 let _penMoveHandler=null, _penClickHandler=null, _penDblClickHandler=null, _penKeyHandler=null;
 
+// Hoogste laag op de dia + 1: een nieuw blok komt altijd bovenop
+function nextZOrder(s){
+  let z=-1;
+  (s.textBlocks||[]).forEach(tb=>{z=Math.max(z,tb.zOrder||0);});
+  (s.mediaBlocks||[]).forEach(mb=>{z=Math.max(z,mb.zOrder||0);});
+  return z+1;
+}
+// Plaats een blok van w×h: gecentreerd op `at` (canvascoördinaten) of in het
+// midden van de dia, binnen de dia en niet precies op een bestaand blok.
+function placeBlock(s,w,h,at){
+  let x=at?at.x-w/2:(1920-w)/2,y=at?at.y-h/2:(1080-h)/2;
+  x=Math.max(0,Math.min(1920-Math.min(w,1920),x));y=Math.max(0,Math.min(1080-Math.min(h,1080),y));
+  const taken=(px,py)=>(s.mediaBlocks||[]).some(mb=>Math.abs(mb.x-px)<4&&Math.abs(mb.y-py)<4)||(s.textBlocks||[]).some(tb=>Math.abs(tb.x-px)<4&&Math.abs(tb.y-py)<4);
+  for(let i=0;i<20&&taken(Math.round(x),Math.round(y));i++){x+=30;y+=30;}
+  return{x:Math.round(x),y:Math.round(y)};
+}
+function addMediaBlock(block,at){
+  const s=slides[currentSlide];
+  if(!s.mediaBlocks)s.mediaBlocks=[];
+  const p=placeBlock(s,block.width,block.height,at);
+  Object.assign(block,{x:p.x,y:p.y,rotation:block.rotation||0,opacity:block.opacity??1,zOrder:nextZOrder(s)});
+  s.mediaBlocks.push(block);
+  selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
+  renderTextBlocks();renderMediaBlocks();showMcControls();updateSlideList();recordHistory();
+}
+
 function addImageBlock(){
   document.getElementById('image-file-input').click();
 }
-document.getElementById('image-file-input').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;e.target.value='';
+// Afbeelding (bestand, gesleept of geplakt) als blok toevoegen
+function addImageFile(f,at){
   const reader=new FileReader();
   reader.onload=async ev=>{
     let src=ev.target.result;
     // Compress large images to max 1920px
-    if(f.type!=='image/svg+xml'){
-      src=await compressImage(src,1920,1080,0.85);
+    if(f.type!=='image/svg+xml'&&f.type!=='image/gif'){
+      try{src=await compressImage(src,1920,1080,0.85);}catch(e){}
     }
     const img=new Image();
     img.onload=()=>{
-      let w=img.width,h=img.height;
-      // Scale to fit reasonably in canvas coords (max 600px wide default)
-      if(w>600){const r=600/w;w=600;h=Math.round(h*r);}
-      const s=slides[currentSlide];
-      if(!s.mediaBlocks)s.mediaBlocks=[];
-      s.mediaBlocks.push({type:'image',src:src,x:200,y:200,width:w,height:h,rotation:0,opacity:1});
-      selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-      renderMediaBlocks();showMcControls();recordHistory();
+      let w=img.naturalWidth||img.width||400,h=img.naturalHeight||img.height||300;
+      // Scale to fit reasonably in canvas coords (max 600px wide / 500 high default)
+      const r=Math.min(1,600/w,500/h);w=Math.round(w*r);h=Math.round(h*r);
+      addMediaBlock({type:'image',src:src,width:w,height:h},at);
     };
+    img.onerror=()=>showToast('Deze afbeelding kan niet worden gelezen.','error');
     img.src=src;
   };
   reader.readAsDataURL(f);
+}
+document.getElementById('image-file-input').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(f)addImageFile(f,null);
 });
 
 function addLocalVideo(){
   document.getElementById('video-file-input').click();
 }
-
-function addYouTubeBlock(){
-  // Show inline input overlay
-  const wrap=document.getElementById('preview-wrap');
-  const box=document.createElement('div');
-  box.id='yt-inline-input';
-  box.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.98);border:1px solid var(--border);border-radius:10px;padding:24px 28px;z-index:50;box-shadow:0 8px 40px rgba(0,0,0,.12);min-width:380px;text-align:center';
-  box.innerHTML=`<div style="font-family:Cormorant Garamond,serif;font-size:20px;color:#b8602a;margin-bottom:12px">YouTube toevoegen</div>
-    <input type="text" id="yt-url-field" placeholder="Plak YouTube URL hier..." style="width:100%;padding:10px 14px;border:1px solid #e0dbd2;border-radius:6px;font-family:Outfit,sans-serif;font-size:13px;outline:none;margin-bottom:12px">
-    <div style="display:flex;gap:8px;justify-content:center">
-      <button class="t-btn" onclick="document.getElementById('yt-inline-input').remove()">Annuleren</button>
-      <button class="t-btn primary" id="yt-confirm-btn">Toevoegen</button>
-    </div>`;
-  wrap.appendChild(box);
-  const field=box.querySelector('#yt-url-field');
-  field.focus();
-  // Enter key
-  field.addEventListener('keydown',e=>{if(e.key==='Enter')box.querySelector('#yt-confirm-btn').click();});
-  // Confirm
-  box.querySelector('#yt-confirm-btn').addEventListener('click',()=>{
-    const url=field.value.trim();
-    const id=extractYouTubeID(url);
-    if(!id){alert('Geen geldig YouTube URL herkend.\n\nVoorbeeld:\nhttps://www.youtube.com/watch?v=...\nhttps://youtu.be/...');return;}
-    box.remove();
-    const s=slides[currentSlide];
-    if(!s.mediaBlocks)s.mediaBlocks=[];
-    s.mediaBlocks.push({type:'youtube',src:id,x:200,y:200,width:560,height:315,rotation:0,opacity:1});
-    selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-    renderMediaBlocks();showMcControls();
-  });
-}
-
-document.getElementById('video-file-input').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f)return;e.target.value='';
+async function addVideoFile(f,at){
   if(f.size>50*1024*1024){
-    if(!confirm('Dit videobestand is '+Math.round(f.size/1024/1024)+' MB groot. Grote video\'s maken het presentatiebestand erg groot. Doorgaan?'))return;
+    const ok=await appDialog({title:'Grote video',message:`Dit videobestand is ${Math.round(f.size/1024/1024)} MB groot. Grote video's maken het presentatiebestand erg groot (en traag om op te slaan). Toch toevoegen?`,
+      buttons:[{label:'Annuleren',value:false},{label:'Toevoegen',value:true,primary:true}],cancelValue:false});
+    if(!ok)return;
   }
+  const busy=showToast('Video inladen…','info',0);
   const reader=new FileReader();
-  reader.onload=ev=>{
-    const s=slides[currentSlide];
-    if(!s.mediaBlocks)s.mediaBlocks=[];
-    s.mediaBlocks.push({type:'video',src:ev.target.result,x:200,y:200,width:560,height:315,rotation:0,opacity:1,autoplay:true});
-    selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-    renderMediaBlocks();showMcControls();recordHistory();
-  };
+  reader.onload=ev=>{busy.close();addMediaBlock({type:'video',src:ev.target.result,width:560,height:315,autoplay:true},at);};
+  reader.onerror=()=>{busy.close();showToast('Deze video kan niet worden gelezen.','error');};
   reader.readAsDataURL(f);
+}
+document.getElementById('video-file-input').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(f)addVideoFile(f,null);
 });
+
+async function addYouTubeBlock(){
+  const r=await appDialog({
+    kind:'youtube',title:'YouTube toevoegen',
+    message:'Plak de link van een YouTube-video.',
+    input:{placeholder:'https://www.youtube.com/watch?v=…'},
+    validate:v=>extractYouTubeID(v.trim())?'':'Geen geldige YouTube-link herkend. Bijvoorbeeld: https://youtu.be/… of https://www.youtube.com/watch?v=…',
+    buttons:[{label:'Annuleren',value:'cancel'},{label:'Toevoegen',value:'ok',primary:true}]
+  });
+  if(r.button!=='ok')return;
+  const id=extractYouTubeID(r.value.trim());
+  if(id)addMediaBlock({type:'youtube',src:id,width:560,height:315},null);
+}
 
 function renderMediaBlocks(){
   const wrap=document.getElementById('preview-wrap');
   wrap.querySelectorAll('.media-overlay,.pen-curve-overlay,.pen-anchor,.pen-handle,.pen-handle-line').forEach(el=>el.remove());
   const s=slides[currentSlide];
+  updateUploadZone();
   if(!s.mediaBlocks||!s.mediaBlocks.length)return;
   const wrapW=wrap.clientWidth,wrapH=wrap.clientHeight;
   const scaleX=wrapW/1920,scaleY=wrapH/1080;
@@ -1658,11 +2015,11 @@ function renderMediaBlocks(){
     if(mb.rotation)el.style.transform=`rotate(${mb.rotation}deg)`;
     // Content
     if(mb.type==='image'){
-      el.innerHTML=`<img src="${mb.src}" draggable="false">`;
+      el.innerHTML=`<img src="${escHTML(mb.src)}" draggable="false" alt="">`;
     } else if(mb.type==='video'){
-      el.innerHTML=`<video src="${mb.src}" muted loop style="pointer-events:none"></video>`;
+      el.innerHTML=`<video src="${escHTML(mb.src)}" muted loop style="pointer-events:none"></video>`;
     } else if(mb.type==='youtube'){
-      el.innerHTML=`<div class="yt-placeholder"><div class="yt-play"></div><span class="yt-id">YouTube: ${mb.src}</span></div>`;
+      el.innerHTML=`<div class="yt-placeholder"><div class="yt-play"></div><span class="yt-id">${YT_ID_RE.test(mb.src||'')?'YouTube: '+escHTML(mb.src):'Ongeldige YouTube-link'}</span></div>`;
     } else if(mb.type==='svgtext'){
       const parser=new DOMParser();const doc=parser.parseFromString(mb.src,'image/svg+xml');const svgEl=doc.querySelector('svg');
       if(svgEl){
@@ -1801,7 +2158,7 @@ function selectMediaBlock(idx){
 
 function deleteMediaBlock(idx){
   slides[currentSlide].mediaBlocks.splice(idx,1);
-  selectedMB=null;renderMediaBlocks();hideMcControls();
+  selectedMB=null;renderMediaBlocks();hideMcControls();updateSlideList();
 }
 
 function startDragMedia(e,idx,scaleX,scaleY){
@@ -2144,7 +2501,7 @@ function renderPathColorsPanel(){
     const selected=idx===selectedPathIdx?' highlighted':'';
     html+=`<div class="path-item" data-idx="${idx}">
       <span class="path-label${selected}" onclick="selectPathInPanel(${idx})">Pad ${idx+1}</span>
-      <input type="color" value="${pc.color}" oninput="updatePathColor(${idx},this.value)">
+      <input type="color" value="${escHTML(pc.color)}" oninput="updatePathColor(${idx},this.value)">
       <button class="visibility-btn ${visClass}" onclick="togglePathVisibility(${idx})" title="${pc.visible?'Maak onzichtbaar':'Maak zichtbaar'}">${visIcon}</button>
     </div>`;
   });
@@ -2189,16 +2546,16 @@ function startDragPanel(e){
 }
 
 function highlightPath(pathIdx){
-  // Briefly highlight the path in preview by flashing it
+  // Briefly highlight the path in preview by flashing it.
+  // (Niet de onzichtbare klikzones meetellen: die staan vóór elk pad.)
   const svg=document.getElementById('preview-svg');
-  const paths=svg.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect');
-  if(paths[pathIdx]){
-    const orig=paths[pathIdx].style.stroke||paths[pathIdx].getAttribute('stroke');
-    const origWidth=paths[pathIdx].style.strokeWidth||paths[pathIdx].getAttribute('stroke-width');
-    paths[pathIdx].style.stroke='#ff6600';
-    paths[pathIdx].style.strokeWidth='10';
-    setTimeout(()=>{paths[pathIdx].style.stroke=orig||'#1a1a1a';paths[pathIdx].style.strokeWidth=origWidth||'6';},800);
-  }
+  const el=svg.querySelector(`[data-pidx="${pathIdx}"]:not(.hit-zone)`);
+  if(!el)return;
+  const orig=el.style.stroke||el.getAttribute('stroke');
+  const origWidth=el.style.strokeWidth||el.getAttribute('stroke-width');
+  el.style.stroke='#ff6600';
+  el.style.strokeWidth='10';
+  setTimeout(()=>{if(!el.isConnected)return;el.style.stroke=orig||'#1a1a1a';el.style.strokeWidth=origWidth||'6';},800);
 }
 
 // Rotate text blocks by dragging the rotate handle
@@ -2525,7 +2882,12 @@ async function loadOneLineFont(){
       });
       // Dot letters: reverse path order so animation follows: entry→up→dot→down→body
       if(isDotLetter&&paths.length>=5){paths.reverse();}
+      // Richting waarin de lijn het teken in- en uitgaat (voor de aansluitlijnen
+      // links en rechts van "Tekst als pad"). null = begint/eindigt onzichtbaar.
+      const first=paths[0],last=paths[paths.length-1];
       oneLineFont[letter]={
+        entryTan:first.visible?oneLinePathTangent(first.d,false):null,
+        exitTan:last.visible?oneLinePathTangent(last.d,true):null,
         pathD:paths[0].d,
         paths:paths,
         isDotLetter:isDotLetter,
@@ -2540,6 +2902,30 @@ async function loadOneLineFont(){
     }
   }catch(e){console.warn('One Line Font laden mislukt:',e);}
 }
+// Eenheidsvector van de looprichting aan het begin (fromEnd=false) of het
+// eind (true) van een pad, gemeten over de eerste/laatste ~10 eenheden.
+function oneLinePathTangent(d,fromEnd){
+  const pts=fastSamplePath(String(d||'').replace(/[Zz]/g,''),300);
+  if(!pts||pts.length<2)return null;
+  const arr=fromEnd?pts.slice().reverse():pts;
+  let acc=0;
+  for(let i=1;i<arr.length;i++){
+    acc+=Math.hypot(arr[i].x-arr[i-1].x,arr[i].y-arr[i-1].y);
+    if(acc>=10||i===arr.length-1){
+      const dx=arr[i].x-arr[0].x,dy=arr[i].y-arr[0].y,l=Math.hypot(dx,dy);
+      if(!l)return null;
+      return fromEnd?{x:-dx/l,y:-dy/l}:{x:dx/l,y:dy/l};
+    }
+  }
+  return null;
+}
+// Zo lopen letters in een woord in elkaar over: de vorige letter eindigt
+// schuin omhoog naar rechts. Een aansluitlijn die niet vloeiend kan aansluiten
+// (de letter vertrekt naar links of omlaag, zoals r, e, A, M, N en 8, of het
+// teken begint/eindigt met een onzichtbare verbinding, zoals ( " ! ?) gebruikt
+// dezelfde richting, zodat hij aansluit zoals een letter dat zou doen.
+const ONE_LINE_JOIN_TAN=(()=>{const x=0.55,y=-0.84,l=Math.hypot(x,y);return{x:x/l,y:y/l};})();
+function oneLineSmoothJoin(t){return !!t&&t.x>=-0.1&&t.y<=0.5;}
 // Leestekens staan met een naam in de bestandsnaam: Windows staat : ? / " niet toe.
 const ONE_LINE_PUNCTUATION={punt:'.',komma:',',uitroepteken:'!',vraagteken:'?',streepje:'-',
   dubbelepunt:':',puntkomma:';',apostrof:"'",aanhalingsteken:'"','haakje-openen':'(',
@@ -2649,7 +3035,62 @@ function rebuildSvgTextSrc(mb){
 // Get screen-space start/end points for svgtext line extensions
 // Reads actual SVG path start/end coordinates for precise alignment
 // SVG uses preserveAspectRatio="xMinYMin meet" so content aligns to top-left (no offset)
+// Aansluitpunten (in SVG-coördinaten) uit de data-attach-* attributen die
+// composeOneLineText zet: {s:[x,y,tx,ty], f:[x,y,tx,ty]}. Voor tekstpaden uit
+// oudere bestanden (zonder die attributen) worden ze opnieuw berekend.
+const _svgTextAttachCache=new Map();
+function svgTextAttach(mb){
+  if(!mb||!mb.src)return null;
+  if(_svgTextAttachCache.has(mb.src))return _svgTextAttachCache.get(mb.src);
+  const read=src=>{
+    const m1=/data-attach-start="([^"]+)"/.exec(src),m2=/data-attach-end="([^"]+)"/.exec(src);
+    if(!m1||!m2)return null;
+    const s=m1[1].split(',').map(Number),f=m2[1].split(',').map(Number);
+    return(s.length===4&&f.length===4&&s.every(isFinite)&&f.every(isFinite))?{s,f}:null;
+  };
+  let a=read(mb.src);
+  if(!a&&mb.text&&Object.keys(oneLineFont).length){
+    const fresh=composeOneLineText(mb.text,mb.letterColors);
+    // Alleen gebruiken als de opbouw (viewBox) gelijk is aan het opgeslagen pad
+    const vb=s=>(/viewBox="([^"]+)"/.exec(s||'')||[])[1];
+    if(fresh&&vb(fresh)===vb(mb.src))a=read(fresh);
+  }
+  if(_svgTextAttachCache.size>200)_svgTextAttachCache.clear();
+  _svgTextAttachCache.set(mb.src,a);
+  return a;
+}
 function getSvgTextScreenEndpoints(mb,wrapW,wrapH,domSvgEl){
+  const att=svgTextAttach(mb);
+  if(att){
+    const [sx,sy,stx,sty]=att.s,[fx,fy,ftx,fty]=att.f;
+    const res={startTanX:stx,startTanY:sty,finishTanX:ftx,finishTanY:fty};
+    let mapped=false;
+    // Editor: exacte positie via de echte SVG op het scherm
+    if(domSvgEl&&domSvgEl.getScreenCTM){
+      try{
+        const ctm=domSvgEl.getScreenCTM();
+        const wrap=document.getElementById('preview-wrap');
+        if(ctm&&wrap.clientWidth>0&&wrap.clientHeight>0){
+          const wr=wrap.getBoundingClientRect();
+          const wrLeft=wr.left+wrap.clientLeft,wrTop=wr.top+wrap.clientTop;
+          const scX=wrap.clientWidth/1920,scY=wrap.clientHeight/1080;
+          const mk=(x,y)=>{const p=domSvgEl.createSVGPoint();p.x=x;p.y=y;const q=p.matrixTransform(ctm);return{x:(q.x-wrLeft)/scX,y:(q.y-wrTop)/scY};};
+          const a=mk(sx,sy),b=mk(fx,fy);
+          res.startScreenX=a.x;res.baselineScreenY=a.y;res.finishScreenX=b.x;res.finishScreenY=b.y;
+          mapped=true;
+        }
+      }catch(e){}
+    }
+    if(!mapped){
+      // Presentatie / export: rekenen met viewBox en blokgrootte
+      const vbm=/viewBox="([^"]+)"/.exec(mb.src);
+      const vb=(vbm?vbm[1]:'0 0 400 240').split(/[\s,]+/).map(Number);
+      const scale=Math.min(mb.width/vb[2],mb.height/vb[3]);
+      res.startScreenX=mb.x+(sx-vb[0])*scale;res.baselineScreenY=mb.y+(sy-vb[1])*scale;
+      res.finishScreenX=mb.x+(fx-vb[0])*scale;res.finishScreenY=mb.y+(fy-vb[1])*scale;
+    }
+    return res;
+  }
   // When a live DOM SVG element is available (editor), use exact CTM positioning
   if(domSvgEl&&domSvgEl.getScreenCTM){
     try{
@@ -2943,7 +3384,7 @@ function renderExtensionLines(mb,wrap,wrapW,wrapH,mbIdx){
     // Invisible wider hit zone + visible path
     overlay.innerHTML=`<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" style="width:100%;height:100%;overflow:visible;pointer-events:none">
       <path d="${d}" fill="none" stroke="transparent" stroke-width="24" stroke-linecap="round" style="cursor:pointer;pointer-events:stroke"/>
-      <path d="${d}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/></svg>`;
+      <path d="${d}" fill="none" stroke="${escHTML(color)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/></svg>`;
     // Click on line → color picker for extension line
     overlay.querySelector('path').addEventListener('click',e=>{
       e.stopPropagation();
@@ -3089,6 +3530,7 @@ function composeOneLineText(text, letterColors){
   let letterIdx=0;
   let maxSvgHeight=200;
   let prevDigit=false,prevFinishY=0;
+  let firstG=null,firstDx=0,lastG=null,lastDx=0;
   for(const ch of text){
     if(ch===' '&&!oneLineFont[' ']){cursorX+=SPACE_W;prevDigit=false;continue;}
     const g=oneLineGlyph(ch);
@@ -3108,6 +3550,7 @@ function composeOneLineText(text, letterColors){
       }
       dx=cursorX-g.startX;
     }
+    if(!g.isSpace){if(!firstG){firstG=g;firstDx=dx;}lastG=g;lastDx=dx;}
     const color=(letterColors&&letterColors[letterIdx])||'#1a1a1a';
     if(g.isSpace||(g.paths&&g.paths.length>1)){
       // Multi-path letter (i, j) or space — preserve visibility per path
@@ -3132,6 +3575,21 @@ function composeOneLineText(text, letterColors){
   totalW=Math.max(totalW,cursorX);
   const pad=20;
   const vbX=-pad,vbY=-pad,vbW=Math.ceil(totalW)+pad*2,vbH=maxSvgHeight+pad*2;
+  // Aansluitpunten voor de lijnen links/rechts (zie getSvgTextScreenEndpoints):
+  // het eerste/laatste zichtbare punt als de lijn daar vloeiend kan aansluiten,
+  // anders het begin-/eindpunt op de schrijflijn met de 'woord'-richting.
+  let attach='';
+  if(firstG&&lastG){
+    const fmt=v=>(Math.round(v*100)/100);
+    const firstPts=fastSamplePath(paths[0].d.replace(/[Zz]/g,''),40);
+    const lastPts=fastSamplePath(paths[paths.length-1].d.replace(/[Zz]/g,''),40);
+    let sx=firstDx+firstG.startX,sy=firstG.startY,fx=lastDx+lastG.finishX,fy=lastG.finishY;
+    if(firstG.paths[0].visible&&firstPts&&firstPts.length){sx=firstPts[0].x;sy=firstPts[0].y;}
+    if(lastG.paths[lastG.paths.length-1].visible&&lastPts&&lastPts.length){const lp=lastPts[lastPts.length-1];fx=lp.x;fy=lp.y;}
+    const st=oneLineSmoothJoin(firstG.entryTan)?firstG.entryTan:ONE_LINE_JOIN_TAN;
+    const ft=oneLineSmoothJoin(lastG.exitTan)?lastG.exitTan:ONE_LINE_JOIN_TAN;
+    attach=` data-attach-start="${[sx,sy,st.x,st.y].map(fmt).join(',')}" data-attach-end="${[fx,fy,ft.x,ft.y].map(fmt).join(',')}"`;
+  }
   const pathEls=paths.map(p=>{
     const invisible=p.visible===false;
     const dotLetter=p.isDotLetter?` data-dot-letter="true"`:'';
@@ -3139,109 +3597,76 @@ function composeOneLineText(text, letterColors){
       ?`  <path d="${p.d}" data-idx="${p.idx}" data-invisible="true" fill="none" stroke="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
       :`  <path d="${p.d}" data-idx="${p.idx}"${dotLetter} fill="none" stroke="${p.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   }).join('\n');
-  const svg=`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMinYMin meet">\n${pathEls}\n</svg>`;
+  const svg=`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMinYMin meet"${attach}>\n${pathEls}\n</svg>`;
   return svg;
 }
 
-function showOneLineTextDialog(){
+// Dialoog voor "Tekst als pad" (nieuw of aanpassen). Toont live welke tekens
+// niet in het font zitten. Geeft de tekst terug, of null bij annuleren.
+async function askOneLineText(title,value,okLabel){
   const available=oneLineAvailableText();
-  if(!available){alert('One Line Font nog niet geladen. Probeer het opnieuw.');return;}
-  const wrap=document.getElementById('preview-wrap');
-  const box=document.createElement('div');
-  box.id='olf-inline-input';
-  box.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.98);border:1px solid var(--border);border-radius:10px;padding:24px 28px;z-index:50;box-shadow:0 8px 40px rgba(0,0,0,.12);min-width:380px;text-align:center';
-  box.innerHTML=`<div style="font-family:Cormorant Garamond,serif;font-size:20px;color:#b8602a;margin-bottom:8px">Tekst als pad</div>
-    <div style="font-size:11px;color:var(--ink-light);margin-bottom:12px">Beschikbaar: ${escHTML(available)}</div>
-    <input type="text" id="olf-text-field" placeholder="Typ tekst..." style="width:100%;padding:10px 14px;border:1px solid #e0dbd2;border-radius:6px;font-family:Outfit,sans-serif;font-size:13px;outline:none;margin-bottom:12px">
-    <div style="display:flex;gap:8px;justify-content:center">
-      <button class="t-btn" onclick="document.getElementById('olf-inline-input').remove()">Annuleren</button>
-      <button class="t-btn primary" id="olf-confirm-btn">Toevoegen</button>
-    </div>`;
-  wrap.appendChild(box);
-  const field=box.querySelector('#olf-text-field');
-  field.focus();
-  field.addEventListener('keydown',e=>{if(e.key==='Enter')box.querySelector('#olf-confirm-btn').click();});
-  box.querySelector('#olf-confirm-btn').addEventListener('click',()=>{
-    const text=field.value.trim();
-    if(!text){alert('Voer tekst in.');return;}
-    const missing=oneLineMissingChars(text);
-    if(missing.length)alert('Niet beschikbare tekens: '+missing.join(' ')+'\nDeze worden overgeslagen.');
-    const letterColors=[];
-    for(let i=0;i<text.length;i++)letterColors.push('#1a1a1a');
-    const svgText=composeOneLineText(text,letterColors);
-    if(!svgText){box.remove();return;}
-    box.remove();
-    const parser=new DOMParser();const doc=parser.parseFromString(svgText,'image/svg+xml');const svgEl=doc.querySelector('svg');
-    const vb=(svgEl.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
-    const svgW=vb[2],svgH=vb[3];
-    const scale=Math.min(800/svgW,400/svgH);
-    const w=Math.round(svgW*scale),h=Math.round(svgH*scale);
-    const s=slides[currentSlide];
-    if(!s.mediaBlocks)s.mediaBlocks=[];
-    s.mediaBlocks.push({type:'svgtext',text:text,src:svgText,x:Math.round((1920-w)/2),y:Math.round((1080-h)/2),width:w,height:h,rotation:0,opacity:1,letterColors:letterColors});
-    selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();
-    renderMediaBlocks();showMcControls();
+  if(!available){showToast('Het one-line-font is nog niet geladen. Probeer het zo opnieuw.','warn');return null;}
+  const r=await appDialog({
+    kind:'olf',title:title,
+    message:'Beschikbaar: '+available,
+    input:{value:value||'',placeholder:'Typ tekst…'},
+    onInput:v=>{const m=oneLineMissingChars(v);return m.length?'Niet in het font (wordt overgeslagen): '+m.join(' '):'';},
+    validate:v=>!v.trim()?'Typ eerst een tekst.':(composeOneLineText(v.trim(),[])?'':'Geen van deze tekens zit in het font.'),
+    buttons:[{label:'Annuleren',value:'cancel'},{label:okLabel,value:'ok',primary:true}]
   });
+  return r.button==='ok'?r.value.trim():null;
+}
+async function showOneLineTextDialog(){
+  const text=await askOneLineText('Tekst als pad','','Toevoegen');
+  if(!text)return;
+  const letterColors=[];
+  for(let i=0;i<text.length;i++)letterColors.push('#1a1a1a');
+  const svgText=composeOneLineText(text,letterColors);
+  if(!svgText)return;
+  const parser=new DOMParser();const doc=parser.parseFromString(svgText,'image/svg+xml');const svgEl=doc.querySelector('svg');
+  const vb=(svgEl.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
+  const svgW=vb[2],svgH=vb[3];
+  const scale=Math.min(800/svgW,400/svgH);
+  const w=Math.round(svgW*scale),h=Math.round(svgH*scale);
+  addMediaBlock({type:'svgtext',text:text,src:svgText,width:w,height:h,letterColors:letterColors},null);
 }
 
-function editSvgText(mbIdx){
+async function editSvgText(mbIdx){
   const s=slides[currentSlide];
   const mb=s.mediaBlocks[mbIdx];
   if(!mb||mb.type!=='svgtext')return;
-  const available=oneLineAvailableText();
-  const wrap=document.getElementById('preview-wrap');
-  const box=document.createElement('div');
-  box.id='olf-inline-input';
-  box.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.98);border:1px solid var(--border);border-radius:10px;padding:24px 28px;z-index:50;box-shadow:0 8px 40px rgba(0,0,0,.12);min-width:380px;text-align:center';
-  box.innerHTML=`<div style="font-family:Cormorant Garamond,serif;font-size:20px;color:#b8602a;margin-bottom:8px">Tekst aanpassen</div>
-    <div style="font-size:11px;color:var(--ink-light);margin-bottom:12px">Beschikbaar: ${escHTML(available)}</div>
-    <input type="text" id="olf-text-field" value="${escHTML(mb.text)}" style="width:100%;padding:10px 14px;border:1px solid #e0dbd2;border-radius:6px;font-family:Outfit,sans-serif;font-size:13px;outline:none;margin-bottom:12px">
-    <div style="display:flex;gap:8px;justify-content:center">
-      <button class="t-btn" onclick="document.getElementById('olf-inline-input').remove()">Annuleren</button>
-      <button class="t-btn primary" id="olf-confirm-btn">Opslaan</button>
-    </div>`;
-  wrap.appendChild(box);
-  const field=box.querySelector('#olf-text-field');
-  field.focus();field.select();
-  field.addEventListener('keydown',e=>{if(e.key==='Enter')box.querySelector('#olf-confirm-btn').click();});
-  box.querySelector('#olf-confirm-btn').addEventListener('click',()=>{
-    const newText=field.value.trim();
-    if(!newText){alert('Voer tekst in.');return;}
-    const missing=oneLineMissingChars(newText);
-    if(missing.length)alert('Niet beschikbare tekens: '+missing.join(' ')+'\nDeze worden overgeslagen.');
-    // Keep existing colors where possible, add default for new letters
-    const newColors=[];
-    for(let i=0;i<newText.length;i++){
-      newColors.push(mb.letterColors[i]||'#1a1a1a');
-    }
-    const svgText=composeOneLineText(newText,newColors);
-    if(!svgText){box.remove();return;}
-    box.remove();
-    mb.text=newText;
-    mb.letterColors=newColors;
-    mb.src=svgText;
-    // Update dimensions
-    const parser=new DOMParser();const doc=parser.parseFromString(svgText,'image/svg+xml');const svgEl=doc.querySelector('svg');
-    const vb=(svgEl.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
-    const ratio=vb[2]/vb[3];
-    mb.width=Math.round(mb.height*ratio);
-    renderMediaBlocks();
-  });
+  const newText=await askOneLineText('Tekst aanpassen',mb.text,'Opslaan');
+  if(!newText||!slides[currentSlide].mediaBlocks.includes(mb))return;
+  // Keep existing colors where possible, add default for new letters
+  const newColors=[];
+  for(let i=0;i<newText.length;i++){
+    newColors.push((mb.letterColors&&mb.letterColors[i])||'#1a1a1a');
+  }
+  const svgText=composeOneLineText(newText,newColors);
+  if(!svgText)return;
+  mb.text=newText;
+  mb.letterColors=newColors;
+  mb.src=svgText;
+  // Update dimensions
+  const parser=new DOMParser();const doc=parser.parseFromString(svgText,'image/svg+xml');const svgEl=doc.querySelector('svg');
+  const vb=(svgEl.getAttribute('viewBox')||'0 0 400 240').split(/\s+/).map(Number);
+  const ratio=vb[2]/vb[3];
+  mb.width=Math.round(mb.height*ratio);
+  renderMediaBlocks();updateSlideList();recordHistory();
 }
 
-const uploadZone=document.getElementById('upload-zone');
 const svgFileInput=document.getElementById('svg-file-input');
-uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragging');});
-uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragging'));
-uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragging');const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.svg'))handleSVGFile(f);});
 svgFileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)handleSVGFile(f);e.target.value='';});
 
 function applySVGToSlide(svgText){
+  svgText=sanitizeSvgText(svgText);
+  if(!svgText){showToast('Dit is geen bruikbare SVG.','error');return;}
   const r=processSVGUpload(svgText);
   if(!r)return;
   const s=slides[currentSlide];
   s.svgPath=r.sampledPath;s.originalSVG=r.originalSVG;s.pathLength=measurePath(r.sampledPath);
   s.pathCount=r.pathCount;s.pathColors=r.pathColors;
+  selectedPathIdx=null;
   renderPreview();updateSlideList();renderPathColorsPanel();recordHistory();
 }
 function handleSVGFile(file){
@@ -3250,6 +3675,60 @@ function handleSVGFile(file){
   reader.readAsText(file);
 }
 function pickSvgFile(){document.getElementById('svg-file-input').click();}
+
+// ── Bestanden slepen: SVG = tekening, afbeelding/video = blok, .json = openen ──
+// Werkt overal in het venster; boven het canvas komt het blok op de plek
+// waar je loslaat.
+function dragHasFiles(e){return !!(e.dataTransfer&&[...e.dataTransfer.types].includes('Files'));}
+function canvasPointFromEvent(e){
+  const wrap=document.getElementById('preview-wrap');
+  const r=wrap.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return null;
+  return{x:(e.clientX-r.left)*(1920/r.width),y:(e.clientY-r.top)*(1080/r.height)};
+}
+function fileKind(f){
+  const n=(f.name||'').toLowerCase(),t=f.type||'';
+  if(n.endsWith('.json')||t==='application/json')return'json';
+  if(n.endsWith('.svg')||t==='image/svg+xml')return'svg';
+  if(/^image\/(png|jpe?g|gif|webp)$/.test(t)||/\.(png|jpe?g|gif|webp)$/.test(n))return'image';
+  if(/^video\/(mp4|webm)$/.test(t)||/\.(mp4|webm)$/.test(n))return'video';
+  return'';
+}
+async function handleDroppedFiles(files,at){
+  if(presentHost.isActive())return;
+  const json=files.find(f=>fileKind(f)==='json');
+  if(json){
+    if(!await confirmDiscardChanges('een andere presentatie opent'))return;
+    loadPresentationText(await json.text(),json.name,null);
+    return;
+  }
+  let n=0,skipped=0;
+  for(const f of files){
+    const kind=fileKind(f);
+    const pos=at?{x:at.x+n*30,y:at.y+n*30}:null;
+    if(kind==='svg'){
+      const hadArt=!!slides[currentSlide].originalSVG;
+      applySVGToSlide(await f.text());
+      showToast(hadArt?'Tekening van deze dia vervangen (Ctrl+Z maakt het ongedaan)':'Tekening toegevoegd','ok');
+    }else if(kind==='image'){addImageFile(f,pos);n++;}
+    else if(kind==='video'){addVideoFile(f,pos);n++;}
+    else skipped++;
+  }
+  if(skipped)showToast(`${skipped} bestand${skipped===1?'':'en'} overgeslagen: alleen SVG, PNG, JPG, GIF, WebP, MP4, WebM en .json worden ondersteund.`,'warn');
+}
+(function(){
+  const wrap=document.getElementById('preview-wrap');
+  let depth=0;
+  window.addEventListener('dragenter',e=>{if(!dragHasFiles(e)||presentHost.isActive())return;e.preventDefault();depth++;wrap.classList.add('drop-target');});
+  window.addEventListener('dragover',e=>{if(!dragHasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect=presentHost.isActive()?'none':'copy';});
+  window.addEventListener('dragleave',e=>{if(!dragHasFiles(e))return;depth=Math.max(0,depth-1);if(!depth)wrap.classList.remove('drop-target');});
+  window.addEventListener('drop',e=>{
+    if(!dragHasFiles(e))return;
+    e.preventDefault();depth=0;wrap.classList.remove('drop-target');
+    const files=[...e.dataTransfer.files];
+    if(files.length)handleDroppedFiles(files,canvasPointFromEvent(e));
+  });
+})();
 
 // ── Ingebouwde SVG-bibliotheek ──
 // Afbeeldingen verwijderen uit de bibliotheek: de ingebouwde bestanden zelf
@@ -3335,12 +3814,28 @@ function clearCurrentArt(){slides[currentSlide].svgPath='';slides[currentSlide].
 // SLIDE LIST
 // ============================================================
 let dragFromIdx=null;
+// Korte omschrijving van wat er op een dia staat
+function slideSummary(s){
+  const parts=[];
+  if(s.svgPath||s.originalSVG)parts.push('tekening');
+  const mbs=s.mediaBlocks||[];
+  const nPath=mbs.filter(mb=>mb.type==='svgtext').length;
+  const nText=(s.textBlocks||[]).length+(s.subtitle&&s.subtitle.trim()?1:0);
+  const nMedia=mbs.length-nPath;
+  if(nPath)parts.push(nPath+'× tekstpad');
+  if(nText)parts.push(nText+'× tekst');
+  if(nMedia)parts.push(nMedia+'× media');
+  return parts.length?parts.join(' · '):'leeg';
+}
 function updateSlideList(){
   const list=document.getElementById('slide-list');list.innerHTML='';
   slides.forEach((s,i)=>{
     const div=document.createElement('div');div.className='slide-thumb'+(i===currentSlide?' active':'');
-    div.draggable=true;
-    div.innerHTML=`<div class="num">${i+1}</div><div class="info"><div class="title">${s.title||'Zonder titel'}</div><div class="sub">${s.svgPath?'SVG ✓':'Geen afbeelding'}</div></div><button class="duplicate-btn" onclick="event.stopPropagation();duplicateSlide(${i})" title="Dupliceer dia">⧉</button>${slides.length>1?`<button class="delete-btn" onclick="event.stopPropagation();deleteSlide(${i})">×</button>`:''}`;
+    div.draggable=true;div.dataset.idx=i;
+    div.setAttribute('role','button');div.setAttribute('aria-label',`Dia ${i+1}: ${s.title||'Zonder titel'}`);
+    if(i===currentSlide)div.setAttribute('aria-current','true');
+    const t=thumbCache[i];
+    div.innerHTML=`<div class="num">${i+1}</div><div class="info"><div class="thumb-frame" style="background:${escHTML(s.bgColor||'#ffffff')}"><img class="thumb-img" alt="" draggable="false"${t&&t.url?` src="${t.url}"`:''}></div><div class="title">${escHTML(s.title||'Zonder titel')}</div><div class="sub">${slideSummary(s)}</div></div><div class="thumb-actions"><button class="duplicate-btn" onclick="event.stopPropagation();duplicateSlide(${i})" title="Dupliceer dia" aria-label="Dupliceer dia ${i+1}">⧉</button>${slides.length>1?`<button class="delete-btn" onclick="event.stopPropagation();deleteSlide(${i})" title="Verwijder dia" aria-label="Verwijder dia ${i+1}">×</button>`:''}</div>`;
     div.onclick=()=>selectSlide(i);
     div.addEventListener('dragstart',e=>{dragFromIdx=i;div.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
     div.addEventListener('dragend',()=>{dragFromIdx=null;div.classList.remove('dragging');list.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bottom');});});
@@ -3367,15 +3862,19 @@ function selectSlide(i,skipSave){
   document.getElementById('subtitle-input').value=s.subtitle||'';
   document.getElementById('bg-color-input').value=s.bgColor||'#ffffff';
   document.getElementById('line-color-input').value=s.lineColor||'#1a1a1a';
+  selectedPathIdx=null;
+  if(penToolActive)cleanupPenTool();
   syncSubControls();renderPreview();updateSlideList();renderTextBlocks();renderMediaBlocks();hideTbControls();hideMcControls();renderPathColorsPanel();
+  const act=document.querySelector('#slide-list .slide-thumb.active');
+  if(act&&act.scrollIntoView)act.scrollIntoView({block:'nearest'});
 }
+// Nieuwe dia direct ná de huidige, met dezelfde kleuren en ondertitelstijl
 function addSlide(){
   saveInputs();
   const prev=slides[currentSlide];
-  slides.push({title:`Dia ${slides.length+1}`,subtitle:'',svgPath:'',originalSVG:'',pathLength:0,
-    subFont:prev.subFont,subSize:prev.subSize,subBold:prev.subBold,subItalic:prev.subItalic,textBlocks:[],mediaBlocks:[],
-    bgColor:prev.bgColor||'#ffffff',lineColor:prev.lineColor||'#1a1a1a',subColor:prev.subColor||'#1a1a1a',pathColors:[],pathCount:0});
-  selectSlide(slides.length-1);
+  slides.splice(currentSlide+1,0,newSlideData(slides.length+1,prev));
+  selectSlide(currentSlide+1,true);
+  recordHistory();
 }
 function deleteSlide(i){
   if(slides.length<=1)return;
@@ -3393,7 +3892,208 @@ function duplicateSlide(i){
   slides.splice(i+1,0,copy);
   selectSlide(i+1);
 }
-document.getElementById('slide-title-input').addEventListener('input',e=>{slides[currentSlide].title=e.target.value;updateSlideList();});
+// Titel typen: alleen de titel in de zijbalk bijwerken (niet de hele lijst
+// opnieuw opbouwen bij elke toetsaanslag)
+document.getElementById('slide-title-input').addEventListener('input',e=>{
+  slides[currentSlide].title=e.target.value;
+  const t=document.querySelector(`#slide-list .slide-thumb[data-idx="${currentSlide}"] .title`);
+  if(t)t.textContent=e.target.value||'Zonder titel';
+  else updateSlideList();
+});
+
+// ============================================================
+// MINIATUREN IN DE ZIJBALK
+// ============================================================
+// Per dia een kleine SVG-weergave (als <img> via een blob-URL, zodat de
+// <style>-blokken van verschillende tekeningen elkaar niet beïnvloeden).
+// Alleen dia's die echt veranderd zijn worden opnieuw gemaakt.
+const thumbCache=[]; // per dia-index: {sig,url}
+let thumbTimer=null;
+const DRAWABLE_SEL='path,line,polyline,polygon,circle,ellipse,rect';
+function thumbSig(s){
+  return JSON.stringify(s,(k,v)=>{
+    if(k==='title')return undefined;
+    if(typeof v==='string'&&v.length>300)return v.length+':'+v.slice(0,48)+':'+v.slice(-48);
+    return v;
+  });
+}
+function svgNum(v){return Math.round(v*100)/100;}
+function thumbArtSVG(s){
+  if(s.originalSVG){
+    try{
+      const doc=new DOMParser().parseFromString(s.originalSVG,'image/svg+xml');
+      const root=doc.querySelector('svg');if(!root)return'';
+      let vb=root.getAttribute('viewBox');
+      if(!vb){vb=`0 0 ${parseFloat(root.getAttribute('width'))||1920} ${parseFloat(root.getAttribute('height'))||1080}`;}
+      let idx=0;
+      root.querySelectorAll(DRAWABLE_SEL).forEach(el=>{
+        const pc=s.pathColors&&s.pathColors[idx];idx++;
+        const color=pc?pc.color:(s.lineColor||'#1a1a1a');
+        el.setAttribute('stroke',color);el.style.stroke=color;
+        el.setAttribute('stroke-width','6');el.style.strokeWidth='6';
+        el.style.strokeLinecap='round';el.style.strokeLinejoin='round';
+        const f=el.getAttribute('fill');
+        if(f&&!/^(none|transparent|white|#fff|#ffffff)$/i.test(f)){el.setAttribute('fill','none');el.style.fill='none';}
+        if(pc&&pc.visible===false)el.style.strokeOpacity='0';
+      });
+      root.setAttribute('x','0');root.setAttribute('y','0');root.setAttribute('width','1920');root.setAttribute('height','1080');
+      root.setAttribute('viewBox',vb);root.setAttribute('preserveAspectRatio','xMidYMid meet');
+      return new XMLSerializer().serializeToString(root);
+    }catch(e){return'';}
+  }
+  if(s.svgPath)return`<path d="${escHTML(s.svgPath)}" fill="none" stroke="${escHTML(s.lineColor||'#1a1a1a')}" stroke-width="6" stroke-linecap="round"/>`;
+  return'';
+}
+function thumbTextSVG(text,x,y,size,font,bold,italic,color,align,rotation,anchorCenter){
+  const lines=String(text||'').split('\n');
+  const lh=size*1.2;
+  const estW=Math.max(...lines.map(l=>l.length))*size*0.48;
+  let ax=x,anchor='start';
+  if(anchorCenter){anchor='middle';}
+  else if(align==='center'){ax=x+estW/2;anchor='middle';}
+  else if(align==='right'){ax=x+estW;anchor='end';}
+  const y0=y+size*0.95;
+  const cx=anchorCenter?x:x+estW/2,cy=y+lines.length*lh/2;
+  const tf=rotation?` transform="rotate(${svgNum(rotation)} ${svgNum(cx)} ${svgNum(cy)})"`:'';
+  const spans=lines.map((l,i)=>`<tspan x="${svgNum(ax)}" y="${svgNum(y0+i*lh)}">${escHTML(l)||' '}</tspan>`).join('');
+  return`<text font-family="'${escHTML(font)}', Georgia, serif" font-size="${svgNum(size)}" font-weight="${bold?700:400}" font-style="${italic?'italic':'normal'}" fill="${escHTML(color||'#1a1a1a')}" text-anchor="${anchor}" xml:space="preserve"${tf}>${spans}</text>`;
+}
+function thumbMediaSVG(mb){
+  const x=svgNum(mb.x),y=svgNum(mb.y),w=svgNum(mb.width),h=svgNum(mb.height);
+  const cx=svgNum(mb.x+mb.width/2),cy=svgNum(mb.y+mb.height/2);
+  const tf=mb.rotation?` transform="rotate(${svgNum(mb.rotation)} ${cx} ${cy})"`:'';
+  const op=mb.opacity!==undefined&&mb.opacity!==1?` opacity="${svgNum(mb.opacity)}"`:'';
+  const play=(fill)=>{const s=Math.min(w,h)*0.18;return`<path d="M${svgNum(cx-s*0.6)} ${svgNum(cy-s)} L${svgNum(cx+s)} ${cy} L${svgNum(cx-s*0.6)} ${svgNum(cy+s)} Z" fill="${fill}"/>`;};
+  if(mb.type==='image')return`<g${tf}${op}><image href="${escHTML(mb.src)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/></g>`;
+  if(mb.type==='video')return`<g${tf}${op}><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#2a2a2a"/>${play('#ffffff')}</g>`;
+  if(mb.type==='youtube')return`<g${tf}${op}><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#111"/><rect x="${svgNum(cx-w*0.12)}" y="${svgNum(cy-h*0.12)}" width="${svgNum(w*0.24)}" height="${svgNum(h*0.24)}" rx="${svgNum(h*0.05)}" fill="#e00"/>${play('#ffffff')}</g>`;
+  if(mb.type==='svgtext'){
+    try{
+      const doc=new DOMParser().parseFromString(mb.src,'image/svg+xml');const root=doc.querySelector('svg');if(!root)return'';
+      const vb=(root.getAttribute('viewBox')||'0 0 400 240').split(/[\s,]+/).map(Number);
+      const sc=Math.min(mb.width/vb[2],mb.height/vb[3])||1;
+      // Zelfde lijndikte als in de presentatie (6 op 1920 breed)
+      root.querySelectorAll('path').forEach(p=>{p.removeAttribute('vector-effect');p.setAttribute('stroke-width',String(svgNum(6/sc)));});
+      root.setAttribute('x',x);root.setAttribute('y',y);root.setAttribute('width',w);root.setAttribute('height',h);root.setAttribute('overflow','visible');
+      let out=new XMLSerializer().serializeToString(root);
+      ['lineLeftPath','lineRightPath'].forEach(k=>{
+        const pts=mb[k];if(!pts||pts.length<2)return;
+        const c=mb[k==='lineLeftPath'?'lineLeftColor':'lineRightColor']||'#1a1a1a';
+        out+=`<path d="${escHTML(bezierPathToSVG(pts))}" fill="none" stroke="${escHTML(c)}" stroke-width="6" stroke-linecap="round"/>`;
+      });
+      return`<g${tf}${op}>${out}</g>`;
+    }catch(e){return'';}
+  }
+  return'';
+}
+function slideThumbSVG(s){
+  const parts=[`<rect width="1920" height="1080" fill="${escHTML(s.bgColor||'#ffffff')}"/>`,thumbArtSVG(s)];
+  // Tekst als pad wordt in de presentatie op het canvas getekend: onder de rest
+  (s.mediaBlocks||[]).filter(mb=>mb.type==='svgtext').forEach(mb=>parts.push(thumbMediaSVG(mb)));
+  getLayerItems(s).forEach(it=>{
+    if(it.kind==='tb'){const tb=it.item;parts.push(thumbTextSVG(tb.text,tb.x+8,tb.y+4,tb.size||80,tb.font||'Cormorant Garamond',tb.bold,tb.italic,tb.color,tb.align,tb.rotation,false));}
+    else if(it.item.type!=='svgtext')parts.push(thumbMediaSVG(it.item));
+  });
+  if(s.subtitle&&s.subtitle.trim())parts.push(thumbTextSVG(s.subtitle,960,1080*0.82+4,s.subSize||80,s.subFont||'Cormorant Garamond',s.subBold,s.subItalic,s.subColor,'center',0,true));
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="384" height="216">${parts.join('')}</svg>`;
+}
+function scheduleThumbs(){clearTimeout(thumbTimer);thumbTimer=setTimeout(refreshThumbs,250);}
+function refreshThumbs(){
+  thumbTimer=null;
+  slides.forEach((s,i)=>{
+    const sig=thumbSig(s);
+    let t=thumbCache[i];
+    if(!t||t.sig!==sig){
+      if(t&&t.url)URL.revokeObjectURL(t.url);
+      let url='';
+      try{url=URL.createObjectURL(new Blob([slideThumbSVG(s)],{type:'image/svg+xml'}));}catch(e){}
+      t=thumbCache[i]={sig,url};
+    }
+    const img=document.querySelector(`#slide-list .slide-thumb[data-idx="${i}"] .thumb-img`);
+    if(img&&t.url&&img.getAttribute('src')!==t.url)img.src=t.url;
+  });
+  while(thumbCache.length>slides.length){const t=thumbCache.pop();if(t&&t.url)URL.revokeObjectURL(t.url);}
+}
+
+// ============================================================
+// SNELTOETSEN, KLEMBORD EN BLOKKEN VERPLAATSEN
+// ============================================================
+let blockClipboard=null; // {kind:'tb'|'mb', data, sig}
+function selectedBlock(){
+  const s=slides[currentSlide];
+  if(selectedTB!==null&&s.textBlocks&&s.textBlocks[selectedTB])return{kind:'tb',idx:selectedTB,item:s.textBlocks[selectedTB]};
+  if(selectedMB!==null&&s.mediaBlocks&&s.mediaBlocks[selectedMB])return{kind:'mb',idx:selectedMB,item:s.mediaBlocks[selectedMB]};
+  return null;
+}
+function deselectAll(){
+  if(selectedTB===null&&selectedMB===null)return;
+  selectedTB=null;selectedMB=null;
+  renderTextBlocks();renderMediaBlocks();hideTbControls();hideMcControls();
+}
+// Plak/dupliceer een blok op de huidige dia (iets verschoven als het precies
+// op dezelfde plek zou komen) en selecteer het
+function insertBlockCopy(kind,data){
+  const s=slides[currentSlide];
+  const copy=cloneState(data);
+  const w=kind==='mb'?copy.width:200,h=kind==='mb'?copy.height:100;
+  let x=copy.x,y=copy.y;
+  const same=(a)=>Math.abs(a.x-x)<4&&Math.abs(a.y-y)<4;
+  for(let i=0;i<20&&((s.textBlocks||[]).some(same)||(s.mediaBlocks||[]).some(same));i++){x+=30;y+=30;}
+  copy.x=Math.max(-w/2,Math.min(1920-w/2,x));copy.y=Math.max(-h/2,Math.min(1080-h/2,y));
+  copy.zOrder=nextZOrder(s);
+  if(kind==='tb'){(s.textBlocks=s.textBlocks||[]).push(copy);selectedTB=s.textBlocks.length-1;selectedMB=null;hideMcControls();renderTextBlocks();renderMediaBlocks();showTbControls();}
+  else{(s.mediaBlocks=s.mediaBlocks||[]).push(copy);selectedMB=s.mediaBlocks.length-1;selectedTB=null;hideTbControls();renderTextBlocks();renderMediaBlocks();showMcControls();}
+  updateSlideList();recordHistory();
+}
+function duplicateSelection(){
+  const sel=selectedBlock();
+  if(sel){insertBlockCopy(sel.kind,sel.item);showToast('Blok gedupliceerd','ok',1500);}
+  else{duplicateSlide(currentSlide);recordHistory();showToast('Dia gedupliceerd','ok',1500);}
+}
+function nudgeSelection(dx,dy){
+  const sel=selectedBlock();if(!sel)return;
+  sel.item.x=Math.round(sel.item.x+dx);sel.item.y=Math.round(sel.item.y+dy);
+  if(sel.kind==='tb')renderTextBlocks();else renderMediaBlocks();
+  scheduleHistory(500);
+}
+function isFormControl(t){
+  if(!t)return false;
+  return t.isContentEditable||t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT';
+}
+document.addEventListener('copy',e=>{
+  if(presentHost.isActive()||isFormControl(e.target)||isFormControl(document.activeElement))return;
+  const sel=selectedBlock();if(!sel)return;
+  e.preventDefault();
+  const sig=sel.kind==='tb'?(sel.item.text||'Tekst'):'[One Line blok: '+({image:'afbeelding',video:'video',youtube:'YouTube',svgtext:'tekst als pad'}[sel.item.type]||'media')+']';
+  e.clipboardData.setData('text/plain',sig);
+  blockClipboard={kind:sel.kind,data:cloneState(sel.item),sig};
+  showToast('Blok gekopieerd — plak met Ctrl+V (ook op een andere dia)','ok',2200);
+});
+document.addEventListener('cut',e=>{
+  if(presentHost.isActive()||isFormControl(e.target)||isFormControl(document.activeElement))return;
+  const sel=selectedBlock();if(!sel)return;
+  e.preventDefault();
+  const sig=sel.kind==='tb'?(sel.item.text||'Tekst'):'[One Line blok]';
+  e.clipboardData.setData('text/plain',sig);
+  blockClipboard={kind:sel.kind,data:cloneState(sel.item),sig};
+  if(sel.kind==='tb')deleteTextBlock(sel.idx);else deleteMediaBlock(sel.idx);
+  recordHistory();
+});
+// Plakken op het canvas: een gekopieerd blok, een afbeelding (bijv. een
+// schermafdruk), SVG-code (uit Illustrator) als tekening, of tekst als tekstblok
+document.addEventListener('paste',e=>{
+  if(presentHost.isActive()||document.querySelector('.modal-bg.visible'))return;
+  if(isFormControl(e.target)||isFormControl(document.activeElement))return;
+  const dt=e.clipboardData;if(!dt)return;
+  const img=[...dt.files].find(f=>fileKind(f)==='image');
+  if(img){e.preventDefault();addImageFile(img,null);return;}
+  const svgFile=[...dt.files].find(f=>fileKind(f)==='svg');
+  if(svgFile){e.preventDefault();svgFile.text().then(applySVGToSlide);return;}
+  const text=dt.getData('text/plain');
+  if(blockClipboard&&text===blockClipboard.sig){e.preventDefault();insertBlockCopy(blockClipboard.kind,blockClipboard.data);return;}
+  if(text&&/<svg[\s>]/i.test(text)){e.preventDefault();applySVGToSlide(text.slice(text.search(/<\?xml|<svg/i)));return;}
+  if(text&&text.trim()){e.preventDefault();addTextBlock(text.replace(/\r\n?/g,'\n').trim(),null);}
+});
 
 // ============================================================
 // PREVIEW
@@ -3432,10 +4132,12 @@ function renderPreview(){
       }
       // Make path easier to select: add invisible wider hit zone + drag-to-select
       const idx=pathIdx;
+      el.setAttribute('data-pidx',idx);
       el.style.cursor='pointer';
       el.style.pointerEvents='stroke';
       // Create a wider invisible hit zone behind the path for easier clicking
       const hitZone=el.cloneNode(false);
+      hitZone.classList.add('hit-zone');
       hitZone.style.stroke='transparent';
       hitZone.style.strokeWidth='24';
       hitZone.style.fill='none';
@@ -3455,7 +4157,7 @@ function renderPreview(){
     });
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else if(s.svgPath){
-    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${s.svgPath}" fill="none" stroke="${s.lineColor||'#1a1a1a'}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML=`<path d="${escHTML(s.svgPath)}" fill="none" stroke="${escHTML(s.lineColor||'#1a1a1a')}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
     zone.classList.add('has-art');clearBtn.classList.add('visible');
   }else{svg.setAttribute('viewBox','0 0 1920 1080');svg.innerHTML='';zone.classList.remove('has-art');clearBtn.classList.remove('visible');}
   fitPreview();
@@ -3483,14 +4185,27 @@ presentHost.drawSpeed=()=>parseInt(document.getElementById('speed-range').value)
 presentHost.isActive=()=>document.getElementById('presenter').style.display==='block';
 presentHost.onEnd=()=>stopPresentation();
 presentHost.onEscape=()=>stopPresentation();
+presentHost.endHint='Klik of druk op Esc om terug te gaan naar de editor · ← om terug te bladeren';
 
-function startPresentation(){
+// Heeft een dia iets om te tonen (lijntekening, tekst, media)?
+function slideHasContent(s){
+  return !!(s.svgPath||s.originalSVG||(s.subtitle&&s.subtitle.trim())||
+    (s.textBlocks&&s.textBlocks.some(tb=>(tb.text||'').trim()))||
+    (s.mediaBlocks&&s.mediaBlocks.length));
+}
+
+// fromIdx: dia waarmee de presentatie begint (standaard de eerste)
+function startPresentation(fromIdx){
+  closeAllMenus();
   saveInputs();
-  if(!slides.some(s=>s.svgPath||(s.mediaBlocks&&s.mediaBlocks.some(mb=>mb.type==='svgtext')))){alert('Upload eerst SVG\'s.');return;}
+  if(penToolActive)cancelPenTool();
+  if(!slides.some(slideHasContent)){showToast('Deze presentatie is nog leeg. Voeg eerst een tekening, tekst of media toe.','warn');return;}
+  const start=Math.max(0,Math.min(slides.length-1,(fromIdx|0)));
   // Set background BEFORE showing presenter to prevent white flash
-  pBgColor=slides[0].bgColor||'#ffffff';
+  pBgColor=slides[start].bgColor||'#ffffff';
   const presenter=document.getElementById('presenter');
   presenter.style.background=pBgColor;
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   document.getElementById('editor').style.display='none';
   presenter.style.display='block';
   pCanvas=document.getElementById('present-canvas');pCtx=pCanvas.getContext('2d');
@@ -3503,11 +4218,12 @@ function startPresentation(){
   pViewport.scale=1;
   pViewport.padX=0;
   pViewport.padY=0;
-  sampleAllSlides();pIdx=-1;pAnimating=false;window._drawnPoints=[];pTargetScrollX=0;pOverlayScrollFrom=0;
+  sampleAllSlides();
   // Auto fullscreen to hide taskbar
   document.documentElement.requestFullscreen().catch(()=>{});
-  pNext();
+  pBegin(start);
 }
+function startPresentationHere(){saveInputs();startPresentation(currentSlide);}
 
 // Bepaal de schaal+offset waarmee een SVG-viewBox in het 1920x1080-frame past
 // (zelfde "meet"/gecentreerde weergave als de edit-modus). Voor art dat al op
@@ -3661,6 +4377,7 @@ function sampleAllSlides(){
             blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:leftSampled.color,visible:true});
           });
         }
+        const textStartIdx=blockPts.length;
         // Text points — resample visible points to textBudget, keep invisible as gap markers
         const textStep=Math.max(1,Math.floor(visTextPts.length/textBudget));
         const pushVisible=p=>{
@@ -3698,9 +4415,22 @@ function sampleAllSlides(){
           const color=pathColors[p.pathIdx]||'#1a1a1a';
           blockPts.push({x:px*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:py*pViewport.scale+pViewport.padY,color:color,visible:true});
         }
+        // Sluit de linkerlijn aan op een schrijflijnpunt dat niet het eerste
+        // zichtbare tekstpunt is (bijv. vóór een haakje of aanhalingsteken),
+        // dan gaat de pen daar onzichtbaar naar de tekst.
+        if(leftSampled&&textStartIdx>0&&blockPts[textStartIdx]){
+          const a=blockPts[textStartIdx-1],b=blockPts[textStartIdx];
+          if(Math.hypot(a.x-b.x,a.y-b.y)>2)blockPts.splice(textStartIdx,0,{x:b.x,y:b.y,color:b.color,visible:false});
+        }
         // Right extension line
         if(rightSampled){
           const sampled=sampleBezierPath(rightSampled.pathCopy,rightBudget);
+          // Idem rechts: van de laatste punt/haal onzichtbaar naar het eindpunt
+          const lastPt=blockPts[blockPts.length-1],firstExt=sampled[0];
+          if(lastPt&&firstExt){
+            const ex=firstExt.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,ey=firstExt.y*pViewport.scale+pViewport.padY;
+            if(Math.hypot(lastPt.x-ex,lastPt.y-ey)>2)blockPts.push({x:ex,y:ey,color:rightSampled.color,visible:false});
+          }
           sampled.forEach(p=>{
             blockPts.push({x:p.x*pViewport.scale+pViewport.padX+i*pViewport.slideStride,y:p.y*pViewport.scale+pViewport.padY,color:rightSampled.color,visible:true});
           });
@@ -3715,64 +4445,234 @@ function sampleAllSlides(){
 
 function stopPresentation(){
   if(pCancel){pCancel();pCancel=null;}
+  pAnimating=false;
+  hideEndScreen();setBlank(null);clearTimeout(pCursorTimer);
   if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-  document.getElementById('presenter').style.display='none';document.getElementById('editor').style.display='flex';
+  const presenter=document.getElementById('presenter');
+  presenter.style.cursor='';
+  presenter.style.display='none';document.getElementById('editor').style.display='flex';
   document.getElementById('present-title').classList.remove('visible');document.getElementById('present-subtitle').classList.remove('visible');
   document.getElementById('present-textblocks').innerHTML='';
   stopPresentMediaBlocks();
+  // Terug in de editor op de dia waar de presentatie stopte
+  if(pIdx>=0&&pIdx<slides.length&&pIdx!==currentSlide){selectSlide(pIdx);return;}
   fitPreview();renderPreview();renderTextBlocks();renderMediaBlocks();
 }
 
 // ============================================================
-// SAVE / LOAD
+// BESTAND: NIEUW / OPENEN / OPSLAAN / OPSLAAN ALS
 // ============================================================
-async function exportJSON(){
-  saveInputs();
-  const exp=slides.map(s=>({title:s.title,subtitle:s.subtitle,svgPath:s.svgPath,originalSVG:s.originalSVG||'',pathLength:s.pathLength,
-    subFont:s.subFont,subSize:s.subSize,subBold:s.subBold,subItalic:s.subItalic,
-    bgColor:s.bgColor||'#ffffff',lineColor:s.lineColor||'#1a1a1a',subColor:s.subColor||'#1a1a1a',
-    pathColors:s.pathColors||[],pathCount:s.pathCount||0,
-    textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text,x:tb.x,y:tb.y,font:tb.font,size:tb.size,bold:tb.bold,italic:tb.italic,align:tb.align,rotation:tb.rotation,color:tb.color||'#1a1a1a',zOrder:tb.zOrder||0})),
-    mediaBlocks:(s.mediaBlocks||[]).map(mb=>{
-      const base={type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,autoplay:mb.autoplay!==undefined?mb.autoplay:true,zOrder:mb.zOrder||0};
-      if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
+// Net als een gewone desktop-app onthoudt de app in welk bestand de
+// presentatie staat: Ctrl+S schrijft daarna direct naar dat bestand (via de
+// File System Access API in Chrome/Edge/Electron). Zonder die API (bijv.
+// Firefox) wordt het bestand gedownload.
+let fileHandle=null,fileName='';
+const PRES_FILE_TYPES=[{description:'One Line presentatie (.json)',accept:{'application/json':['.json']}}];
+const numOr=(v,d)=>(typeof v==='number'&&isFinite(v))?v:d;
+const strOr=(v,d)=>typeof v==='string'?v:d;
+const MEDIA_TYPES=['image','video','youtube','svgtext'];
+
+// Een presentatiebestand kan van iemand anders komen: haal uit SVG's alles
+// weg wat code kan uitvoeren (script, event-handlers, javascript:-links).
+// Schone SVG's (de normale situatie) blijven letterlijk hetzelfde.
+function sanitizeSvgText(txt){
+  if(typeof txt!=='string'||!txt)return'';
+  if(!/<script|\son[a-z]+\s*=|javascript:|<foreignObject|<iframe|<object|<embed/i.test(txt))return txt;
+  try{
+    const doc=new DOMParser().parseFromString(txt,'image/svg+xml');
+    const root=doc.documentElement;
+    if(!root||root.nodeName.toLowerCase()!=='svg')return'';
+    doc.querySelectorAll('script,foreignObject,iframe,object,embed').forEach(n=>n.remove());
+    [root,...root.querySelectorAll('*')].forEach(el=>{
+      [...el.attributes].forEach(a=>{
+        const n=a.name.toLowerCase();
+        if(n.startsWith('on')||((n==='href'||n.endsWith(':href'))&&/^\s*javascript:/i.test(a.value)))el.removeAttribute(a.name);
+      });
+    });
+    return new XMLSerializer().serializeToString(root);
+  }catch(e){return'';}
+}
+const SAFE_COLOR_RE=/^(#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\)|none)$/i;
+function safeColor(c,d){return(typeof c==='string'&&SAFE_COLOR_RE.test(c.trim()))?c.trim():d;}
+
+function normalizeSlide(s){
+  s=s||{};
+  return{title:strOr(s.title,''),subtitle:strOr(s.subtitle,''),svgPath:strOr(s.svgPath,'').replace(/[^MLCSQTAHVZmlcsqtahvz0-9eE.,+\-\s]/g,''),originalSVG:sanitizeSvgText(strOr(s.originalSVG,'')),pathLength:numOr(s.pathLength,0),
+    subFont:FONTS.includes(s.subFont)?s.subFont:'Cormorant Garamond',subSize:numOr(s.subSize,80),subBold:!!s.subBold,subItalic:!!s.subItalic,
+    bgColor:safeColor(s.bgColor,'#ffffff'),lineColor:safeColor(s.lineColor,'#1a1a1a'),subColor:safeColor(s.subColor,'#1a1a1a'),
+    pathColors:Array.isArray(s.pathColors)?s.pathColors.map(pc=>({color:safeColor(pc&&pc.color,'#1a1a1a'),visible:!(pc&&pc.visible===false)})):[],
+    pathCount:numOr(s.pathCount,0),
+    textBlocks:(Array.isArray(s.textBlocks)?s.textBlocks:[]).filter(Boolean).map(tb=>({text:strOr(tb.text,''),x:numOr(tb.x,50),y:numOr(tb.y,50),font:FONTS.includes(tb.font)?tb.font:'Cormorant Garamond',size:numOr(tb.size,80),bold:!!tb.bold,italic:!!tb.italic,align:['left','center','right'].includes(tb.align)?tb.align:'left',rotation:numOr(tb.rotation,0),color:safeColor(tb.color,'#1a1a1a'),zOrder:numOr(tb.zOrder,0)})),
+    mediaBlocks:(Array.isArray(s.mediaBlocks)?s.mediaBlocks:[]).filter(mb=>mb&&MEDIA_TYPES.includes(mb.type||'image')).map(mb=>{
+      const type=mb.type||'image';
+      let src=strOr(mb.src,'');
+      if(type==='svgtext')src=sanitizeSvgText(src);
+      else if(type==='youtube'&&!YT_ID_RE.test(src))src=extractYouTubeID(src)||'';
+      else if(/^\s*javascript:/i.test(src))src='';
+      const base={type,src,x:numOr(mb.x,200),y:numOr(mb.y,200),width:numOr(mb.width,400),height:numOr(mb.height,300),rotation:numOr(mb.rotation,0),opacity:numOr(mb.opacity,1),autoplay:mb.autoplay!==false,zOrder:numOr(mb.zOrder,0)};
+      if(type==='svgtext'){
+        const pts=p=>Array.isArray(p)?p.filter(q=>q&&isFinite(q.x)&&isFinite(q.y)).map(q=>{const o={x:+q.x,y:+q.y};if(q.cpIn&&isFinite(q.cpIn.x)&&isFinite(q.cpIn.y))o.cpIn={x:+q.cpIn.x,y:+q.cpIn.y};if(q.cpOut&&isFinite(q.cpOut.x)&&isFinite(q.cpOut.y))o.cpOut={x:+q.cpOut.x,y:+q.cpOut.y};return o;}):null;
+        base.text=strOr(mb.text,'');base.letterColors=Array.isArray(mb.letterColors)?mb.letterColors.map(c=>safeColor(c,'#1a1a1a')):[];
+        base.lineLeftPath=pts(mb.lineLeftPath);base.lineRightPath=pts(mb.lineRightPath);
+        base.lineLeftColor=mb.lineLeftColor?safeColor(mb.lineLeftColor,null):null;base.lineRightColor=mb.lineRightColor?safeColor(mb.lineRightColor,null):null;
+      }
       return base;
-    })}));
-  const json=JSON.stringify({version:9,slides:exp},null,2);
-  // Use File System Access API to let user pick save location
+    })};
+}
+function buildPresentationJSON(){
+  saveInputs();
+  return JSON.stringify({version:10,app:'One Line Prezi',settings:{drawSpeed:getDrawSpeed()},slides:slides.map(normalizeSlide)},null,2);
+}
+function downloadText(text,name,type){
+  const blob=new Blob([text],{type:type||'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+// Bestandsnaam zonder extensie: van het huidige bestand, anders de eerste diatitel
+function suggestedBaseName(){
+  if(fileName)return fileName.replace(/\.[^.]+$/,'');
+  const t=(slides[0]&&slides[0].title)||'';
+  return t.replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim().slice(0,60)||'one-line-presentatie';
+}
+async function writeToHandle(handle,text){
+  const w=await handle.createWritable();
+  await w.write(text);
+  await w.close();
+}
+async function canWriteHandle(handle){
+  if(!handle.queryPermission)return true;
+  const opts={mode:'readwrite'};
+  if(await handle.queryPermission(opts)==='granted')return true;
+  return(await handle.requestPermission(opts))==='granted';
+}
+// saveAs=true: altijd een nieuwe plek/naam kiezen
+async function savePresentation(saveAs){
+  closeAllMenus();
+  const json=buildPresentationJSON();
+  if(!saveAs&&fileHandle){
+    try{
+      if(await canWriteHandle(fileHandle)){
+        await writeToHandle(fileHandle,json);
+        markDocSaved();showToast('Opgeslagen in '+fileHandle.name,'ok');
+        return true;
+      }
+    }catch(e){console.warn('Direct opslaan mislukt, kies opnieuw een plek:',e);}
+  }
   if(window.showSaveFilePicker){
     try{
-      const handle=await window.showSaveFilePicker({suggestedName:'one-line-presentatie.json',types:[{description:'JSON bestand',accept:{'application/json':['.json']}}]});
-      const writable=await handle.createWritable();
-      await writable.write(json);
-      await writable.close();
-      markDocSaved();
-      return;
-    }catch(e){if(e.name==='AbortError')return;/* user cancelled */}
+      const h=await window.showSaveFilePicker({suggestedName:suggestedBaseName()+'.json',types:PRES_FILE_TYPES});
+      await writeToHandle(h,json);
+      fileHandle=h;fileName=h.name;
+      markDocSaved();showToast('Opgeslagen als '+h.name,'ok');
+      return true;
+    }catch(e){
+      if(e.name==='AbortError')return false;
+      console.warn('Opslaan via dialoog mislukt, val terug op downloaden:',e);
+    }
   }
-  // Fallback for browsers without File System Access API
-  const blob=new Blob([json],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='one-line-presentatie.json';a.click();
-  markDocSaved();
+  const name=suggestedBaseName()+'.json';
+  downloadText(json,name,'application/json');
+  fileHandle=null;fileName=name;
+  markDocSaved();showToast('Gedownload als '+name,'ok');
+  return true;
 }
-function importJSON(){document.getElementById('json-file-input').click();}
+function exportJSON(){return savePresentation(false);} // oude naam (knoppen/sneltoets)
+// Bij niet-opgeslagen wijzigingen eerst vragen. Geeft true als we door mogen.
+async function confirmDiscardChanges(action){
+  recordHistory();
+  if(!isDocDirty())return true;
+  const choice=await appDialog({
+    title:'Niet-opgeslagen wijzigingen',
+    message:`Je presentatie heeft wijzigingen die nog niet zijn opgeslagen. Wil je ze opslaan voordat je ${action}?`,
+    buttons:[{label:'Opslaan',value:'save',primary:true},{label:'Niet opslaan',value:'discard'},{label:'Annuleren',value:'cancel'}]
+  });
+  if(choice==='save')return await savePresentation(false);
+  return choice==='discard';
+}
+function newSlideData(n,like){
+  like=like||{};
+  return{title:`Dia ${n}`,subtitle:'',svgPath:'',originalSVG:'',pathLength:0,
+    subFont:like.subFont||'Cormorant Garamond',subSize:like.subSize||80,subBold:!!like.subBold,subItalic:!!like.subItalic,textBlocks:[],mediaBlocks:[],
+    bgColor:like.bgColor||'#ffffff',lineColor:like.lineColor||'#1a1a1a',subColor:like.subColor||'#1a1a1a',pathColors:[],pathCount:0};
+}
+async function newPresentation(){
+  closeAllMenus();
+  if(!await confirmDiscardChanges('een nieuwe presentatie begint'))return;
+  if(penToolActive)cancelPenTool();
+  slides=[newSlideData(1)];
+  currentSlide=0;selectedTB=null;selectedMB=null;
+  fileHandle=null;fileName='';
+  selectSlide(0,true);
+  resetHistory(false);
+  showToast('Nieuwe presentatie','ok');
+}
+async function openPresentation(){
+  closeAllMenus();
+  if(!await confirmDiscardChanges('een andere presentatie opent'))return;
+  if(window.showOpenFilePicker){
+    try{
+      const [h]=await window.showOpenFilePicker({types:PRES_FILE_TYPES,multiple:false});
+      const f=await h.getFile();
+      loadPresentationText(await f.text(),f.name,h);
+    }catch(e){
+      if(e.name==='AbortError')return;
+      console.warn('Openen via dialoog mislukt, gebruik het bestandsveld:',e);
+      document.getElementById('json-file-input').click();
+    }
+    return;
+  }
+  document.getElementById('json-file-input').click();
+}
+function importJSON(){openPresentation();} // oude naam
+function loadPresentationText(text,name,handle){
+  let data;
+  try{data=JSON.parse(text);}catch(e){showToast('Dit bestand is geen geldige presentatie (geen JSON).','error');return false;}
+  if(!data||!Array.isArray(data.slides)||!data.slides.length){showToast('In dit bestand staan geen dia\'s.','error');return false;}
+  if(penToolActive)cancelPenTool();
+  slides=data.slides.map(normalizeSlide);
+  if(data.settings&&data.settings.drawSpeed)setDrawSpeed(data.settings.drawSpeed);
+  fileHandle=handle||null;fileName=name||'';
+  currentSlide=0;selectedTB=null;selectedMB=null;
+  selectSlide(0,true);
+  resetHistory(false);
+  showToast('Geopend: '+(name||'presentatie')+` (${slides.length} dia${slides.length===1?'':"'s"})`,'ok');
+  return true;
+}
 document.getElementById('json-file-input').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f)return;const reader=new FileReader();
-  reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.slides?.length>0){
-    slides=data.slides.map(s=>({title:s.title||'',subtitle:s.subtitle||'',svgPath:s.svgPath||'',originalSVG:s.originalSVG||'',pathLength:s.pathLength||0,
-      subFont:s.subFont||'Cormorant Garamond',subSize:s.subSize||80,subBold:!!s.subBold,subItalic:!!s.subItalic,
-      bgColor:s.bgColor||'#ffffff',lineColor:s.lineColor||'#1a1a1a',subColor:s.subColor||'#1a1a1a',
-      pathColors:s.pathColors||[],pathCount:s.pathCount||0,
-      textBlocks:(s.textBlocks||[]).map(tb=>({text:tb.text||'',x:tb.x??50,y:tb.y??50,font:tb.font||'Cormorant Garamond',size:tb.size??80,bold:!!tb.bold,italic:!!tb.italic,align:tb.align||'left',rotation:tb.rotation??0,color:tb.color||'#1a1a1a',zOrder:tb.zOrder??0})),
-      mediaBlocks:(s.mediaBlocks||[]).map(mb=>{
-        const base={type:mb.type||'image',src:mb.src||'',x:mb.x??200,y:mb.y??200,width:mb.width??400,height:mb.height??300,rotation:mb.rotation??0,opacity:mb.opacity??1,autoplay:mb.autoplay??true,zOrder:mb.zOrder??0};
-        if(mb.type==='svgtext'){base.text=mb.text||'';base.letterColors=mb.letterColors||[];base.lineLeftPath=mb.lineLeftPath||null;base.lineRightPath=mb.lineRightPath||null;base.lineLeftColor=mb.lineLeftColor||null;base.lineRightColor=mb.lineRightColor||null;}
-        return base;
-      })}));
-    currentSlide=0;selectSlide(0,true);resetHistory(false);}}catch{alert('Ongeldig bestand.');}};
-  reader.readAsText(f);e.target.value='';
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const reader=new FileReader();
+  reader.onload=ev=>loadPresentationText(ev.target.result,f.name,null);
+  reader.readAsText(f);
 });
-function showHelp(){document.getElementById('help-modal').classList.add('visible');}
+// Naam van het bestand + opgeslagen/niet opgeslagen, in de zijbalk en de titelbalk
+function updateDocStatus(){
+  const el=document.getElementById('doc-status');
+  const dirty=isDocDirty();
+  if(el){
+    el.textContent=fileName?(fileName+(dirty?' — niet opgeslagen':' — opgeslagen')):('Nieuwe presentatie'+(dirty?' — niet opgeslagen':''));
+    el.classList.toggle('dirty',dirty);
+    el.title=fileName?('Bestand: '+fileName):'Nog niet als bestand opgeslagen';
+  }
+  document.title=(dirty?'• ':'')+(fileName?fileName.replace(/\.json$/i,'')+' — ':'')+DOC_TITLE;
+}
+
+// Tekensnelheid: hoort bij de presentatie (wordt mee opgeslagen) en is ook de
+// standaard voor een nieuwe presentatie op deze computer.
+const SPEED_KEY='one-line-prezi-speed';
+function getDrawSpeed(){return Math.max(1,Math.min(10,parseInt(document.getElementById('speed-range').value)||3));}
+function setDrawSpeed(v){
+  v=Math.max(1,Math.min(10,parseInt(v)||3));
+  document.getElementById('speed-range').value=v;
+  document.getElementById('speed-val').textContent=v;
+}
+document.getElementById('speed-range').addEventListener('input',e=>{
+  setDrawSpeed(e.target.value);
+  try{localStorage.setItem(SPEED_KEY,String(getDrawSpeed()));}catch(err){}
+});
+try{const sv=localStorage.getItem(SPEED_KEY);if(sv)setDrawSpeed(sv);}catch(e){}
+
+function showHelp(){closeAllMenus();document.getElementById('help-modal').classList.add('visible');}
 
 // ============================================================
 // STANDALONE HTML EXPORT
@@ -3858,15 +4758,15 @@ async function loadFontsAsBase64(usedFamilies){
 
 async function exportStandaloneHTML(){
   saveInputs();
-  if(!slides.some(s=>s.svgPath||s.originalSVG||(s.mediaBlocks&&s.mediaBlocks.some(mb=>mb.type==='svgtext')))){alert('Upload eerst SVG\'s.');return;}
+  closeAllMenus();
+  if(!slides.some(slideHasContent)){showToast('Deze presentatie is nog leeg: er valt niets te exporteren.','warn');return;}
   const hasVideos=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='video'));
   const hasYouTube=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube'));
-  if(hasVideos){alert('Let op: lokale video\'s worden niet meegenomen in de HTML-export.');}
-  if(hasYouTube){alert('Let op: in de geëxporteerde HTML opent een YouTube-video in een nieuw tabblad op YouTube (insluiten werkt niet als je het bestand met dubbelklik opent). Wil je dat de video ín de presentatie speelt, presenteer dan vanuit de app zelf.');}
+  if(hasVideos){showToast('Let op: lokale video\'s worden niet meegenomen in de HTML-export.','warn',7000);}
+  if(hasYouTube){showToast('Let op: in de geëxporteerde HTML opent een YouTube-video in een nieuw tabblad (insluiten werkt niet vanaf een bestand). Presenteer vanuit de app om de video ín de presentatie te spelen.','warn',9000);}
 
   // Show loading
-  const btn=document.querySelector('[onclick="exportStandaloneHTML()"]');
-  const origText=btn.textContent;btn.textContent='Exporteren...';btn.disabled=true;
+  const busy=showToast('Exporteren…','info',0);
 
   try{
     // 1. Determine used fonts
@@ -3920,7 +4820,7 @@ async function exportStandaloneHTML(){
 ${fontCSS}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfit',sans-serif}
-#presenter{position:fixed;inset:0;overflow:hidden}
+#presenter{position:fixed;inset:0;overflow:hidden;user-select:none;-webkit-user-select:none}
 #present-canvas{position:absolute}
 #present-counter{position:fixed;bottom:20px;right:30px;font-size:11px;color:#ccc;z-index:101;letter-spacing:1px}
 #present-controls{position:fixed;top:20px;right:24px;z-index:101;display:flex;gap:8px;opacity:0;transition:opacity .3s}
@@ -3947,7 +4847,7 @@ body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:'Outfi
 .yt-error a{color:#ff5252;font-weight:600}
 .yt-next-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(0,0,0,.45);color:#fff;font-family:'Outfit',sans-serif;font-size:20px;z-index:5}
 .yt-next-overlay span{padding:10px 22px;border:2px solid #fff;background:rgba(0,0,0,.4)}
-#start-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:pointer;transition:opacity .5s}
+#start-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:pointer;transition:opacity .5s;background:#000;text-align:center;padding:24px}
 #start-screen h1{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:48px;color:#fff;letter-spacing:4px;margin-bottom:16px}
 #start-screen p{font-size:14px;color:#999;letter-spacing:1px}
 #start-screen.hidden{opacity:0;pointer-events:none}
@@ -3984,40 +4884,49 @@ pCanvas=document.getElementById('present-canvas');pCtx=pCanvas.getContext('2d');
 presentHost.drawSpeed=()=>${speed};
 presentHost.isActive=()=>document.getElementById('start-screen').classList.contains('hidden');
 presentHost.onEscape=()=>{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});};
+presentHost.endHint='Klik om opnieuw te beginnen · ← om terug te bladeren';
+let startShownAt=0;
+// Na het eindscherm terug naar het startscherm (opnieuw beginnen kan dan)
+presentHost.onEnd=()=>{
+  hideEndScreen();stopPresentMediaBlocks();
+  document.getElementById('start-screen').classList.remove('hidden');
+  startShownAt=Date.now();
+};
 function beginPresentation(){
+  if(Date.now()-startShownAt<400)return;
   document.getElementById('start-screen').classList.add('hidden');
   pCanvas.width=1920;pCanvas.height=1080;
-  pBgColor=slides[0].bgColor||'#ffffff';
-  document.getElementById('presenter').style.background=pBgColor;pCanvas.style.background=pBgColor;
-  fitPresentCanvas();pIdx=-1;pAnimating=false;window._drawnPoints=[];pTargetScrollX=0;pOverlayScrollFrom=0;pNext();
+  fitPresentCanvas();pBegin(0);
 }
 // Op het startscherm start elke toets de presentatie
 document.addEventListener('keydown',e=>{
-  if(!presentHost.isActive()){beginPresentation();e.preventDefault();}
+  if(!presentHost.isActive()&&!e.ctrlKey&&!e.metaKey&&!e.altKey){beginPresentation();e.preventDefault();}
 });
 <\/script></body></html>`;
 
     // 7. Save
-    const safeName=(presTitle||'presentatie').replace(/[^a-zA-Z0-9 _-]/g,'')||'presentatie';
-    let saved=false;
+    const safeName=suggestedBaseName();
+    let savedName=null;
     if(window.showSaveFilePicker){
       try{
         const handle=await window.showSaveFilePicker({suggestedName:safeName+'.html',types:[{description:'HTML bestand',accept:{'text/html':['.html']}}]});
         const writable=await handle.createWritable();
         await writable.write(html);
         await writable.close();
-        saved=true;
-      }catch(e){if(e.name==='AbortError'){btn.textContent=origText;btn.disabled=false;return;}}
+        savedName=handle.name;
+      }catch(e){if(e.name==='AbortError'){busy.close();return;}console.warn('Opslaan via dialoog mislukt, val terug op downloaden:',e);}
     }
-    if(!saved){
-      const blob=new Blob([html],{type:'text/html'});
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safeName+'.html';a.click();
+    if(!savedName){
+      downloadText(html,safeName+'.html','text/html');
+      savedName=safeName+'.html';
     }
+    busy.close();
+    showToast('HTML-presentatie opgeslagen als '+savedName,'ok');
   }catch(err){
-    alert('Export mislukt: '+err.message);
+    busy.close();
+    showToast('Export mislukt: '+err.message,'error',8000);
     console.error(err);
   }
-  btn.textContent=origText;btn.disabled=false;
 }
 
 // ============================================================
@@ -4107,7 +5016,8 @@ function onDocChanged(){
   const u=document.getElementById('undo-btn'),r=document.getElementById('redo-btn');
   if(u)u.disabled=docHistory.idx<=0;
   if(r)r.disabled=docHistory.idx>=docHistory.stack.length-1;
-  document.title=(isDocDirty()?'• ':'')+DOC_TITLE;
+  updateDocStatus();
+  scheduleThumbs();
   scheduleAutosave();
 }
 
@@ -4129,20 +5039,47 @@ function isTextEditing(t){
 // Sneltoetsen in de editor
 document.addEventListener('keydown',e=>{
   if(presentHost.isActive())return;
+  const modalOpen=!!document.querySelector('.modal-bg.visible');
   const editing=isTextEditing(e.target);
+  const key=e.key;
+  if(key==='F5'){e.preventDefault();if(!modalOpen&&!penToolActive){if(e.shiftKey)startPresentationHere();else startPresentation(0);}return;}
+  if(key==='F1'){e.preventDefault();if(!modalOpen)showHelp();return;}
   if((e.ctrlKey||e.metaKey)&&!e.altKey){
-    const k=e.key.toLowerCase();
-    if(k==='s'){e.preventDefault();exportJSON();return;}
-    if(editing)return; // in tekstvelden werkt de eigen undo van de browser
+    const k=key.toLowerCase();
+    if(k==='s'){e.preventDefault();savePresentation(e.shiftKey);return;}
+    if(k==='o'){e.preventDefault();if(!modalOpen)openPresentation();return;}
+    if(modalOpen||editing)return; // in tekstvelden werkt de eigen undo van de browser
     if(k==='z'&&!e.shiftKey){e.preventDefault();undoHistory();}
     else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redoHistory();}
+    else if(k==='d'){e.preventDefault();duplicateSelection();}
     return;
   }
-  if(editing||penToolActive)return;
-  if((e.key==='Delete'||e.key==='Backspace')&&!document.querySelector('.modal-bg.visible')){
+  if(modalOpen&&key==='Escape'){document.querySelectorAll('.modal-bg.visible:not(.app-dialog)').forEach(m=>m.classList.remove('visible'));return;}
+  if(modalOpen||penToolActive)return;
+  // Esc in een tekstblok: stoppen met typen, het blok blijft geselecteerd
+  if(key==='Escape'&&e.target.classList&&e.target.classList.contains('tb-text')){e.preventDefault();e.target.blur();window.getSelection().removeAllRanges();return;}
+  if(isFormControl(e.target))return;
+  if(key==='Escape'){closeAllMenus();deselectAll();return;}
+  if(key==='Delete'||key==='Backspace'){
     if(selectedTB!==null){e.preventDefault();deleteTextBlock(selectedTB);scheduleHistory(0);}
     else if(selectedMB!==null){e.preventDefault();deleteMediaBlock(selectedMB);scheduleHistory(0);}
+    return;
   }
+  const arrows={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  if(arrows[key]){
+    if(selectedBlock()){
+      // Blok verschuiven: 1 px, met Shift 10 px (in dia-pixels)
+      e.preventDefault();const st=e.shiftKey?10:1;
+      nudgeSelection(arrows[key][0]*st,arrows[key][1]*st);
+    }else if(key==='ArrowUp'||key==='ArrowLeft'){
+      if(currentSlide>0){e.preventDefault();selectSlide(currentSlide-1);}
+    }else if(currentSlide<slides.length-1){e.preventDefault();selectSlide(currentSlide+1);}
+    return;
+  }
+  if(key==='PageUp'&&currentSlide>0){e.preventDefault();selectSlide(currentSlide-1);}
+  else if(key==='PageDown'&&currentSlide<slides.length-1){e.preventDefault();selectSlide(currentSlide+1);}
+  else if(key==='Home'&&!selectedBlock()){e.preventDefault();selectSlide(0);}
+  else if(key==='End'&&!selectedBlock()){e.preventDefault();selectSlide(slides.length-1);}
 });
 
 // ============================================================
@@ -4204,13 +5141,17 @@ function flushAutosave(){
 async function writeAutosave(){
   try{
     const newMedia=[],refs=new Set();
-    const doc={savedAt:Date.now(),dirty:isDocDirty(),current:currentSlide,slides:packForAutosave(slides,newMedia,refs)};
+    const doc={savedAt:Date.now(),dirty:isDocDirty(),current:currentSlide,fileName:fileName,drawSpeed:getDrawSpeed(),slides:packForAutosave(slides,newMedia,refs)};
     const db=await autosaveDb();
     await new Promise((resolve,reject)=>{
       const tx=db.transaction(['doc','media'],'readwrite');
       const ms=tx.objectStore('media');
       for(const [k,v] of newMedia)ms.put(v,k);
       tx.objectStore('doc').put(doc,'current');
+      // Het bestand (handle) apart: dan werkt Ctrl+S na herstel weer op
+      // hetzelfde bestand. Lukt bewaren van de handle niet, dan zonder.
+      try{tx.objectStore('doc').put({handle:fileHandle||null,name:fileName},'file');}
+      catch(e){try{tx.objectStore('doc').put({handle:null,name:fileName},'file');}catch(e2){}}
       // Media die niet meer gebruikt worden opruimen
       const keys=ms.getAllKeys();
       keys.onsuccess=()=>{for(const k of keys.result)if(!refs.has(k))ms.delete(k);};
@@ -4233,7 +5174,14 @@ async function offerAutosaveRestore(){
     });
     if(rec&&rec.dirty&&Array.isArray(rec.slides)&&rec.slides.length){
       const when=new Date(rec.savedAt).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'});
-      if(confirm(`Er is een presentatie met niet-opgeslagen wijzigingen gevonden (automatisch bewaard op ${when}).\n\nWil je die herstellen?`)){
+      const n=rec.slides.length;
+      const choice=await appDialog({
+        title:'Werk herstellen?',
+        message:`Er is een presentatie${rec.fileName?' ('+rec.fileName+')':''} met niet-opgeslagen wijzigingen gevonden: ${n} dia${n===1?'':"'s"}, automatisch bewaard op ${when}.\n\nWil je die herstellen?`,
+        buttons:[{label:'Herstellen',value:'restore',primary:true},{label:'Nee, begin leeg',value:'skip'}],
+        cancelValue:'skip'
+      });
+      if(choice==='restore'){
         const media=new Map();
         await new Promise((resolve,reject)=>{
           const tx=db.transaction('media');const ms=tx.objectStore('media');
@@ -4241,12 +5189,22 @@ async function offerAutosaveRestore(){
           tx.oncomplete=()=>{ks.result.forEach((k,i)=>media.set(k,vs.result[i]));resolve();};
           tx.onerror=()=>reject(tx.error);
         });
-        slides=unpackAutosave(rec.slides,media);
+        slides=unpackAutosave(rec.slides,media).map(normalizeSlide);
         currentSlide=Math.min(Math.max(0,rec.current|0),slides.length-1);
         selectedTB=null;selectedMB=null;
+        if(rec.drawSpeed)setDrawSpeed(rec.drawSpeed);
+        fileName=rec.fileName||'';fileHandle=null;
+        try{
+          const f=await new Promise((resolve,reject)=>{
+            const req=db.transaction('doc').objectStore('doc').get('file');
+            req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+          });
+          if(f&&f.handle&&f.name===fileName)fileHandle=f.handle;
+        }catch(e){}
         selectSlide(currentSlide,true);
         autosaveReady=true;
         resetHistory(true);
+        showToast('Presentatie hersteld','ok');
         return;
       }
     }
