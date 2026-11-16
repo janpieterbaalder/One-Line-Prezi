@@ -15,7 +15,7 @@
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-![Version](https://img.shields.io/badge/VERSION-1.6.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
+![Version](https://img.shields.io/badge/VERSION-1.7.0-FF5EB8?style=for-the-badge&labelColor=2A1458)
 ![Platform](https://img.shields.io/badge/PLATFORM-WIN%2032-68E3D6?style=for-the-badge&labelColor=2A1458)
 ![Electron](https://img.shields.io/badge/ELECTRON-40.6.1-FFF38C?style=for-the-badge&labelColor=2A1458&logoColor=2A1458)
 ![Style](https://img.shields.io/badge/STYLE-Y2K%20PASTEL-C9B0F7?style=for-the-badge&labelColor=2A1458)
@@ -45,14 +45,21 @@
 │                                                         │
 │  ✧  Ingebouwde one-line-art bibliotheek                 │
 │  ✧  3D-tekeningen: zandloper, kompas, wegwijzer,        │
-│       boom met vallend blad  (NIEUW)                    │
-│  ✧  Bibliotheek: verwijderen en terugzetten  (NIEUW)    │
+│       boom met vallend blad                             │
 │  ✧  One-line-font: a–z, A–Z, 0–9 en leestekens          │
-│  ✧  Tekstpaden: mini-spatie tussen cijfers, snel        │
-│       en onzichtbaar van pad naar pad  (NIEUW)          │
+│  ✧  Tekstpaden: lijnen links/rechts sluiten             │
+│       vloeiend aan op elke letter  (VERBETERD)          │
+│  ✧  Bestand: nieuw, openen, opslaan (als);              │
+│       Ctrl+S schrijft direct in hetzelfde bestand       │
+│  ✧  Miniaturen van elke dia in de zijbalk  (NIEUW)      │
+│  ✧  Slepen & plakken: SVG, afbeelding, video,           │
+│       tekst of een .json-presentatie  (NIEUW)           │
+│  ✧  Blokken kopiëren, plakken, dupliceren en            │
+│       verschuiven met de pijltjes  (NIEUW)              │
+│  ✧  Presenteren vanaf deze dia, eindscherm,             │
+│       zwart/wit scherm, naar dia springen  (NIEUW)      │
 │  ✧  Ongedaan maken / opnieuw                            │
 │  ✧  Automatisch bewaren + herstel na afsluiten          │
-│  ✧  SVG one-line art upload  (drag & drop)              │
 │  ✧  Kleur per pad — onbeperkt saved palette             │
 │  ✧  Tekstblokken, afbeeldingen, video's, YouTube        │
 │  ✧  Vrij positioneerbaar & roteerbaar                   │
@@ -60,7 +67,6 @@
 │  ✧  Pen tool voor eigen paden                           │
 │  ✧  Live animatie bij presenteren                       │
 │  ✧  Export als standalone HTML                          │
-│  ✧  Opslaan / laden als JSON                            │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -230,10 +236,25 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 
 | Toets | Actie |
 |:---:|:---|
-| `→` / `Spatie` / `PgDn` / `Klik` | Volgende dia |
-| `←` / `PgUp` | Vorige dia |
+| `F5` / `Shift+F5` | Presenteren vanaf het begin / vanaf deze dia |
+| `→` / `Spatie` / `PgDn` / `Klik` / vegen | Volgende dia |
+| `←` / `PgUp` / vegen | Vorige dia |
+| `Home` / `End` | Eerste / laatste dia |
+| `3` `Enter` | Naar dia 3 |
+| `B` / `W` | Zwart / wit scherm (nogmaals = terug) |
+| `F` / `F11` | Volledig scherm |
 | `Esc` | Stop presentatie |
-| `F11` | Volledig scherm |
+
+Na de laatste dia volgt een eindscherm; pas de volgende klik sluit de
+presentatie. Ook de geëxporteerde HTML werkt zo (daar begint hij dan opnieuw).
+
+**Bestand**
+
+| Toets | Actie |
+|:---:|:---|
+| `Ctrl+S` | Opslaan — na de eerste keer direct in hetzelfde bestand |
+| `Ctrl+Shift+S` | Opslaan als… |
+| `Ctrl+O` | Openen (of sleep een `.json` op het venster) |
 
 **Bewerken**
 
@@ -241,11 +262,27 @@ De lijn tekent, de media verschijnt, je publiek is verkocht.
 |:---:|:---|
 | `Ctrl+Z` | Ongedaan maken |
 | `Ctrl+Y` / `Ctrl+Shift+Z` | Opnieuw |
-| `Ctrl+S` | Opslaan |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Blok kopiëren / knippen / plakken (ook naar een andere dia) |
+| `Ctrl+V` | Ook: afbeelding, SVG-code of tekst plakken als nieuw blok |
+| `Ctrl+D` | Blok dupliceren (niets geselecteerd: de dia) |
+| `pijltjes` | Blok 1 px verschuiven (`Shift`: 10 px); zonder selectie: vorige/volgende dia |
+| `PgUp` / `PgDn` | Vorige / volgende dia |
+| `Esc` | Deselecteren (in een tekstblok: stoppen met typen) |
 | `Delete` / `Backspace` | Geselecteerd blok verwijderen |
+| `F1` | Hulp |
 
 > Wijzigingen worden ook automatisch lokaal bewaard. Sluit je de app zonder op
 > te slaan, dan biedt hij bij de volgende start aan om ze te herstellen.
+
+### ▒ AANSLUITLIJNEN BIJ TEKST ALS PAD ▒
+
+Met de **+** links en rechts van een tekstpad teken je een lijn die vanaf de
+rand van de dia in de tekst overloopt. Waar een letter vloeiend kan
+aansluiten, volgt de lijn de richting van de letter. Begint of eindigt een
+teken met een neergaande of terugkerende haal (zoals `r`, `e`, `A`, `M`, `N`,
+`8`) of met een onzichtbare verbinding (leestekens zoals `( " ! ?`), dan sluit
+de lijn aan zoals letters in een woord op elkaar aansluiten: op de schrijflijn,
+schuin omhoog naar rechts.
 
 ---
 
