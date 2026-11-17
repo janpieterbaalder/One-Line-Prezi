@@ -255,11 +255,24 @@ presentatie. Ook de geëxporteerde HTML werkt zo (daar begint hij dan opnieuw).
 naar de volgende dia, ook als de video nog loopt (die pauzeert dan).
 YouTube-video's worden alvast geladen zodra de dia in beeld staat, zodat ze
 direct starten. De pijltjes en spatie bedienen altijd de dia's, ook als je in
-een YouTube-video hebt geklikt (de app haalt het toetsenbord dan meteen terug). Bij YouTube kun je een
-starttijd instellen (of een link met `?t=90` plakken). YouTube kan reclame
-tonen en dat kan geen enkele website uitzetten; wil je zeker geen reclame,
-voeg dan een eigen videobestand toe (*Toevoegen → Video*). Daarbij kies je zelf
-*Auto start*, *Geluid* en *Herhalen*, en de video gaat mee in de HTML-export.
+een YouTube-video hebt geklikt (de app haalt het toetsenbord dan meteen terug).
+YouTube kan reclame tonen en dat kan geen enkele website uitzetten; wil je
+zeker geen reclame, gebruik dan een eigen video (bestand of link, zie hieronder).
+
+**Stukjes kiezen** — Selecteer een video (YouTube, bestand of link) en klik op
+*✂ Stukjes kiezen…*. Speel de video af en klik op *Begin stukje hier* en
+*Einde stukje hier*, of typ de tijden (bijv. `1:30`). In de presentatie speelt
+de video alleen die stukjes, achter elkaar, en stopt daarna. Geen stukjes = de
+hele video. Een YouTube-link met `?t=90` begint vanzelf op die tijd.
+
+**Video's: bestand of link** — *Toevoegen → Video (bestand)* zet de video in de
+presentatie zelf (en in de HTML-export). *Toevoegen → Video via link (cloud)*
+speelt een video af die online staat, zodat het presentatiebestand en de
+HTML-export klein blijven (tijdens het presenteren is internet nodig). De link
+moet openbaar zijn en naar het videobestand wijzen (MP4/WebM); deellinks van
+Dropbox, OneDrive, SharePoint en Google Drive worden vanzelf omgezet, en de app
+controleert de link meteen. Bij beide kies je zelf *Auto start*, *Geluid* en
+*Herhalen*.
 
 **Bestand**
 
