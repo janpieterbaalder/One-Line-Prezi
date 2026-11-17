@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>One Line Color — Presentaties</title>
+<!-- Eigen icoon. Zonder dit toont de browser in de geschiedenis het icoon van
+     een andere app op janpieterbaalder.github.io (bijv. de dobbelsteen van Duizenden). -->
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icon.png" type="image/png" sizes="256x256">
+<link rel="apple-touch-icon" href="assets/icon.png">
 <style>
   /* Cormorant Garamond */
   @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300;font-display:swap;src:url('assets/fonts/cormorant-garamond-300.woff2') format('woff2')}
@@ -5367,6 +5372,8 @@ async function loadFontsAsBase64(usedFamilies){
   return css;
 }
 
+// Icoon voor het tabblad van een geëxporteerde presentatie (= assets/favicon.svg)
+const EXPORT_FAVICON_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="12" fill="#faf8f4" stroke="#b8602a" stroke-width="3"/><path d="M15 46 C20 14, 30 14, 32 32 C34 50, 44 50, 49 18" fill="none" stroke="#b8602a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15" cy="46" r="3.6" fill="#b8602a"/><circle cx="49" cy="18" r="3.6" fill="#b8602a"/></svg>';
 async function exportStandaloneHTML(){
   saveInputs();
   closeAllMenus();
@@ -5431,6 +5438,7 @@ async function exportStandaloneHTML(){
     const html=`<!DOCTYPE html>
 <html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${escHTML(presTitle)}</title>
+<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(EXPORT_FAVICON_SVG)}" type="image/svg+xml">
 <style>
 ${fontCSS}
 *{margin:0;padding:0;box-sizing:border-box}
