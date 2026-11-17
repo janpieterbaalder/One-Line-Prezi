@@ -310,6 +310,35 @@
   #media-controls.visible{display:flex}
   #media-controls::before{content:'▓ MEDIA.sys';position:absolute;top:0;left:0;right:0;height:26px;background:linear-gradient(180deg,var(--accent),var(--accent-2));border-bottom:2px solid var(--border);color:#fff;font-family:var(--font-pixel);font-size:10px;padding:8px 10px;box-sizing:border-box;letter-spacing:1.5px;text-transform:uppercase}
   #media-controls .mc-label{font-family:var(--font-pixel);font-size:9px;color:var(--ink);text-transform:uppercase;letter-spacing:1px;margin-right:2px}
+  /* Stukjes van een video kiezen */
+  .modal-box.dialog-box.seg-box{max-width:780px;max-height:94vh;overflow:auto}
+  .modal-box.dialog-box[data-kind="seg"]::before{content:'▓ STUKJES.exe  □ ×'}
+  .seg-preview{position:relative;width:100%;aspect-ratio:16/9;max-height:40vh;background:#000;margin-bottom:10px}
+  .seg-preview video,.seg-preview iframe{width:100%;height:100%;display:block;border:0}
+  .seg-preview>div{width:100%;height:100%}
+  .seg-noplayer{color:#fff;display:flex;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;font-family:var(--font-ui)}
+  .seg-now-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+  .seg-now{font-family:var(--font-ui);font-size:17px;margin-right:auto;color:var(--ink)}
+  .seg-status{min-height:22px;font-family:var(--font-ui);font-size:15px;color:var(--ink-light);margin-bottom:6px}
+  .seg-status.error{color:var(--danger)}
+  .seg-list{list-style:none;padding:0;margin:0 0 10px;max-height:26vh;overflow:auto;border-top:2px dashed var(--border)}
+  .seg-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--ink-light);flex-wrap:wrap;font-family:var(--font-ui);font-size:15px;color:var(--ink)}
+  .seg-row label{display:inline-flex;align-items:center;gap:5px}
+  .seg-nr{min-width:22px;font-weight:700}
+  .seg-time{width:74px;background:var(--panel);border:2px solid var(--border);color:var(--ink);padding:3px 6px;font-family:var(--font-ui);font-size:15px;text-align:center;box-shadow:var(--hard-shadow-sm)}
+  .seg-time:focus{outline:none;box-shadow:var(--hard-shadow-sm),0 0 0 2px var(--accent-cyan)}
+  .seg-len{color:var(--ink-light);min-width:70px}
+  .seg-empty{padding:10px 0;color:var(--ink-light);font-family:var(--font-ui);font-size:15px}
+  .seg-actions{align-items:center}
+  .seg-badge{position:absolute;top:6px;left:6px;background:var(--border);color:#fff;font-family:var(--font-ui);font-size:13px;padding:1px 7px;pointer-events:none;z-index:2;max-width:calc(100% - 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .media-overlay .cloud-badge~.seg-count{top:30px}
+  .cloud-err,.present-media .cloud-err{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;background:rgba(0,0,0,.75);color:#fff;font-family:var(--font-ui);font-size:15px;pointer-events:none}
+  .modal-box.dialog-box[data-kind="cloud"]::before{content:'▓ CLOUD-VIDEO.exe  □ ×'}
+  body.classic .seg-now,body.classic .seg-status,body.classic .seg-row,body.classic .seg-empty{font-family:'Outfit',sans-serif;font-size:13px}
+  body.classic .seg-time{border-width:1px;border-radius:5px;box-shadow:none;font-family:'Outfit',sans-serif;font-size:13px}
+  body.classic .seg-time:focus{box-shadow:none;border-color:var(--accent)}
+  body.classic .seg-list{border-top:1px solid var(--border)}
+  body.classic .seg-badge{border-radius:4px;font-family:'Outfit',sans-serif;font-size:11px;background:rgba(0,0,0,.65)}
   .mc-opts{display:none;align-items:center;gap:6px}
   .mc-opts.visible{display:inline-flex}
   .mc-check{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap}
@@ -647,7 +676,8 @@
         <div class="menu-dropdown" id="add-content-dropdown" role="menu">
           <button role="menuitem" onclick="addTextBlock();closeAddMenu()"><span>Tekst</span></button>
           <button role="menuitem" onclick="addImageBlock();closeAddMenu()"><span>Afbeelding</span></button>
-          <button role="menuitem" onclick="addLocalVideo();closeAddMenu()"><span>Video</span></button>
+          <button role="menuitem" onclick="addLocalVideo();closeAddMenu()"><span>Video (bestand)</span></button>
+          <button role="menuitem" onclick="addCloudVideo();closeAddMenu()"><span>Video via link (cloud)</span></button>
           <button role="menuitem" onclick="addYouTubeBlock();closeAddMenu()"><span>YouTube</span></button>
           <button role="menuitem" onclick="showOneLineTextDialog();closeAddMenu()"><span>Tekst als pad</span></button>
         </div>
@@ -718,10 +748,10 @@
             <label class="mc-check"><input type="checkbox" id="mc-sound"> Geluid</label>
             <label class="mc-check"><input type="checkbox" id="mc-loop"> Herhalen</label>
           </span>
-          <span class="mc-opts" id="mc-yt-opts">
+          <span class="mc-opts" id="mc-seg-opts">
             <div class="t-sep"></div>
-            <span class="mc-label">Start bij</span>
-            <input type="text" class="size-input" id="mc-yt-start" placeholder="0:00" title="Begin de video op dit tijdstip, bijv. 1:30 (handig om een intro over te slaan)">
+            <button class="style-btn" id="mc-seg-btn" onclick="openSegmentsEditor()" title="Kies welke stukjes van de video je laat zien (bijv. een intro overslaan)">✂ Stukjes kiezen…</button>
+            <button class="style-btn" id="mc-cloud-btn" onclick="changeCloudVideoUrl()" title="De link naar de online video aanpassen">☁ Link wijzigen…</button>
           </span>
           <div class="t-sep"></div>
           <button class="style-btn" onclick="moveLayerUp('mb')" title="Laag omhoog">&#9650;</button>
@@ -780,7 +810,7 @@
       <strong>Bestand</strong> — <kbd>Ctrl+S</kbd> opslaan (daarna direct in hetzelfde bestand) &nbsp; <kbd>Ctrl+Shift+S</kbd> opslaan als &nbsp; <kbd>Ctrl+O</kbd> openen. Je kunt ook een <em>.json</em>-presentatie op het venster slepen. Wijzigingen worden automatisch bewaard: sluit je zonder op te slaan, dan biedt de app bij de volgende start herstel aan.<br><br>
       <strong>Bewerken</strong> — <kbd>Ctrl+Z</kbd> ongedaan maken &nbsp; <kbd>Ctrl+Y</kbd> opnieuw &nbsp; <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> blok kopiëren en plakken (ook naar een andere dia) &nbsp; <kbd>Ctrl+D</kbd> dupliceren &nbsp; <kbd>Delete</kbd> verwijderen &nbsp; <kbd>pijltjes</kbd> blok verschuiven (met <kbd>Shift</kbd> per 10) &nbsp; <kbd>Esc</kbd> deselecteren &nbsp; <kbd>PgUp</kbd>/<kbd>PgDn</kbd> vorige/volgende dia.<br><br>
       <strong>Presenteren</strong> — <kbd>F5</kbd> vanaf het begin &nbsp; <kbd>Shift+F5</kbd> vanaf deze dia &nbsp; <kbd>→</kbd> <kbd>Spatie</kbd> <kbd>Klik</kbd> volgende &nbsp; <kbd>←</kbd> vorige (de lijn tekent zich opnieuw) &nbsp; <kbd>Home</kbd>/<kbd>End</kbd> eerste/laatste dia &nbsp; <kbd>3</kbd> <kbd>Enter</kbd> naar dia 3 &nbsp; <kbd>K</kbd> video afspelen/pauzeren &nbsp; <kbd>B</kbd>/<kbd>W</kbd> zwart/wit scherm &nbsp; <kbd>F</kbd> volledig scherm &nbsp; <kbd>Esc</kbd> stoppen. Op een tablet: vegen.<br><br>
-      <strong>Video en YouTube</strong> — Staat er een video op de dia, dan start <kbd>→</kbd> (of een klik) eerst de video; nog een keer <kbd>→</kbd> gaat naar de volgende dia, ook als de video nog loopt. YouTube-video's worden alvast geladen zodra de dia in beeld staat. Pauzeren doe je met een klik op de video of <kbd>K</kbd>. Bij YouTube kun je een starttijd instellen. YouTube kan reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, voeg dan een eigen videobestand toe (<em>Toevoegen → Video</em>): daarbij kies je zelf of hij vanzelf start, met geluid speelt en herhaalt, en hij gaat ook mee in de HTML-export.
+      <strong>Video en YouTube</strong> — Staat er een video op de dia, dan start <kbd>→</kbd> (of een klik) eerst de video; nog een keer <kbd>→</kbd> gaat naar de volgende dia, ook als de video nog loopt. YouTube-video's worden alvast geladen zodra de dia in beeld staat. Pauzeren doe je met een klik op de video of <kbd>K</kbd>. Met <em>✂ Stukjes kiezen…</em> (onder een geselecteerde video) bepaal je welke stukjes je laat zien: speel de video af en klik op <em>Begin stukje hier</em> en <em>Einde stukje hier</em>. Met <em>Toevoegen → Video via link (cloud)</em> speel je een video af die online staat (Dropbox, OneDrive/SharePoint, Google Drive of een website); die zit dan niet in het bestand, zodat de presentatie en de HTML-export klein blijven. Tijdens het presenteren is dan wel internet nodig. Bij YouTube kun je een starttijd instellen. YouTube kan reclame tonen; dat kan de app niet uitzetten. Wil je zeker geen reclame, voeg dan een eigen videobestand toe (<em>Toevoegen → Video</em>): daarbij kies je zelf of hij vanzelf start, met geluid speelt en herhaalt, en hij gaat ook mee in de HTML-export.
     </p>
     </div><br>
     <button class="t-btn" onclick="document.getElementById('help-modal').classList.remove('visible')">Sluiten</button>
@@ -842,6 +872,21 @@ window._drawnPoints=[];
 
 function escHTML(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 const YT_ID_RE=/^[A-Za-z0-9_-]{11}$/;
+// Stukjes van een video die getoond worden: [{s,e}] in seconden, e=null =
+// tot het einde. Gesorteerd, zonder overlap, alleen geldige stukjes.
+function cleanSegments(list){
+  if(!Array.isArray(list))return[];
+  const out=list.filter(x=>x&&isFinite(x.s)&&x.s>=0&&(x.e==null||(isFinite(x.e)&&x.e>x.s+0.2)))
+    .map(x=>({s:Math.round(x.s*10)/10,e:x.e==null?null:Math.round(x.e*10)/10}))
+    .sort((a,b)=>a.s-b.s);
+  const merged=[];
+  for(const x of out){
+    const last=merged[merged.length-1];
+    if(last&&(last.e==null||x.s<=last.e)){if(last.e!=null)last.e=(x.e==null)?null:Math.max(last.e,x.e);}
+    else merged.push({...x});
+  }
+  return merged.slice(0,50);
+}
 // Opvulling rond een tekstblok, in dia-pixels (1920×1080). Editor en
 // presentatie schalen dit allebei mee, zodat tekst overal gelijk afbreekt.
 const TB_PAD_X=8,TB_PAD_Y=4;
@@ -1167,17 +1212,64 @@ function pPendingMedia(){
   return pMediaEls().find(el=>!el.dataset.started&&!el.dataset.failed&&
     (el.dataset.kind==='video'||(el.dataset.kind==='youtube'&&location.protocol!=='file:')))||null;
 }
+// ── Alleen de gekozen stukjes van een video afspelen ──
+// el.dataset.segs: [{s,e}] (e=null: tot het einde). Aan het eind van een
+// stukje springt de video naar het volgende; na het laatste stopt hij (eigen
+// video met 'Herhalen': opnieuw vanaf het eerste stukje).
+function pSegments(el){try{const a=JSON.parse(el.dataset.segs||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}}
+// Waar moet de video (her)beginnen? null = gewoon doorspelen.
+function pSegResumeAt(el,t){
+  const segs=pSegments(el);if(!segs.length)return null;
+  if(el.dataset.segDone){delete el.dataset.segDone;return segs[0].s;}
+  const i=segs.findIndex(sg=>sg.e==null||t<sg.e-0.08);
+  if(i===-1)return segs[0].s;
+  return t<segs[i].s-0.3?segs[i].s:null;
+}
+function pWatchSegments(el){
+  const segs=pSegments(el);if(!segs.length||el._segTimer)return;
+  const isYT=el.dataset.kind==='youtube';
+  const v=isYT?null:el.querySelector('video');
+  const P=()=>(el._ytPlayer&&el._ytPlayer.getCurrentTime)?el._ytPlayer:null;
+  const playing=()=>isYT?!!(P()&&P().getPlayerState()===1):!!(v&&!v.paused);
+  const getT=()=>isYT?P().getCurrentTime():v.currentTime;
+  const seek=t=>{if(isYT)P().seekTo(t,true);else v.currentTime=t;};
+  const stop=()=>{el.dataset.segDone='1';if(isYT)P().pauseVideo();else v.pause();};
+  el._segTimer=setInterval(()=>{
+    if(!el.isConnected){clearInterval(el._segTimer);el._segTimer=null;return;}
+    try{
+      if(!playing())return;
+      const t=getT();if(t==null||!isFinite(t))return;
+      const i=segs.findIndex(sg=>sg.e==null||t<sg.e-0.08);
+      if(i===-1){if(!isYT&&el.dataset.loop==='1')seek(segs[0].s);else stop();return;}
+      // In een stuk dat je niet wilt laten zien: door naar het begin van het
+      // volgende stukje. (YouTube: niet terwijl de tijd nog 0 is, bijv. tijdens
+      // reclame; het eerste stukje begint daar via 'start'.)
+      if(t<segs[i].s-0.3&&(i>0||!isYT||t>0.5))seek(segs[i].s);
+    }catch(e){}
+  },100);
+}
 function pStartMedia(el){
   if(!el)return;
   el.dataset.started='1';
-  if(el.dataset.kind==='video'){const v=el.querySelector('video');if(v)pPlayVideo(v);return;}
+  if(el.dataset.kind==='video'){
+    const v=el.querySelector('video');if(!v)return;
+    const at=pSegResumeAt(el,v.currentTime);if(at!=null)v.currentTime=at;
+    pPlayVideo(v);return;
+  }
   if(el.dataset.kind!=='youtube')return;
-  const id=el.dataset.yt,start=parseInt(el.dataset.start)||0;
+  const segs=pSegments(el);
+  const id=el.dataset.yt,start=segs.length?Math.floor(segs[0].s):(parseInt(el.dataset.start)||0);
   // Vanaf file:// (geëxporteerd bestand met dubbelklik geopend) weigert YouTube
   // insluiten: open de video dan rechtstreeks op YouTube.
   if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+id+(start?'&t='+start+'s':''),'_blank');return;}
   el._ytWantPlay=true;
-  if(el._ytReady&&el._ytPlayer&&el._ytPlayer.playVideo){try{el._ytPlayer.playVideo();}catch(e){}}
+  if(el._ytReady&&el._ytPlayer&&el._ytPlayer.playVideo){
+    try{
+      const at=pSegResumeAt(el,el._ytPlayer.getCurrentTime());
+      if(at!=null)el._ytPlayer.seekTo(at,true);
+      el._ytPlayer.playVideo();
+    }catch(e){}
+  }
   else pPrepareYouTube(el);
 }
 // YouTube-speler maken op de plek van de voorbeeldafbeelding. Hij laadt
@@ -1186,7 +1278,8 @@ function pStartMedia(el){
 function pPrepareYouTube(el){
   if(el._ytPlayer||location.protocol==='file:')return;
   const id=el.dataset.yt;if(!YT_ID_RE.test(id||''))return;
-  const start=parseInt(el.dataset.start)||0;
+  const segs=pSegments(el);
+  const start=segs.length?Math.floor(segs[0].s):(parseInt(el.dataset.start)||0);
   el.innerHTML='<div class="yt-player"></div>';
   const mount=el.firstChild;
   el._ytPlayer='laden';
@@ -1199,7 +1292,7 @@ function pPrepareYouTube(el){
       events:{
         onReady:e=>{el._ytReady=true;if(el._ytWantPlay){try{e.target.playVideo();}catch(_){}}},
         onStateChange:e=>{
-          if(e.data===YT.PlayerState.PLAYING){el.dataset.started='1';el.classList.add('playing');}
+          if(e.data===YT.PlayerState.PLAYING){el.dataset.started='1';el.classList.add('playing');pWatchSegments(el);}
           else if(e.data===YT.PlayerState.PAUSED||e.data===YT.PlayerState.ENDED)el.classList.remove('playing');
         },
         onError:()=>{el.dataset.failed='1';el._ytPlayer=null;el.innerHTML='<div class="yt-error">Kan deze video hier niet afspelen.<br><a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener">Open op YouTube ↗</a></div>';}
@@ -1219,6 +1312,7 @@ function pDisposeMedia(root){
   els.forEach(el=>{
     if(el._ytPlayer&&el._ytPlayer.destroy){try{el._ytPlayer.destroy();}catch(e){}}
     el._ytPlayer=null;el._ytReady=false;el._ytWantPlay=false;
+    if(el._segTimer){clearInterval(el._segTimer);el._segTimer=null;}
   });
   root.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});
 }
@@ -1226,10 +1320,10 @@ function pDisposeMedia(root){
 function pToggleMedia(){
   const el=pMediaEls()[0];if(!el)return;
   if(!el.dataset.started&&!el.classList.contains('playing')){pStartMedia(el);return;}
-  if(el.dataset.kind==='video'){const v=el.querySelector('video');if(v){if(v.paused)pPlayVideo(v);else v.pause();}return;}
+  if(el.dataset.kind==='video'){const v=el.querySelector('video');if(v){if(v.paused)pStartMedia(el);else v.pause();}return;}
   const p=el._ytPlayer;
   if(p&&el._ytReady&&p.getPlayerState){
-    try{const st=p.getPlayerState();if(st===1||st===3)p.pauseVideo();else p.playVideo();}catch(e){}
+    try{const st=p.getPlayerState();if(st===1||st===3)p.pauseVideo();else pStartMedia(el);}catch(e){}
   }else pStartMedia(el);
 }
 // Video met geluid starten; lukt dat niet (beleid van de browser), dan zonder geluid
@@ -1408,21 +1502,38 @@ function showPresentMediaBlocks(idx,container){
       // Eigen video: 'volgende', klik of K = afspelen/pauzeren. Oudere
       // presentaties: zonder geluid en herhalend, zoals voorheen.
       el.dataset.kind='video';
+      const segs=cleanSegments(mb.segments);
+      if(segs.length)el.dataset.segs=JSON.stringify(segs);
+      el.dataset.loop=mb.loop!==false?'1':'';
       const v=document.createElement('video');
       v.src=mb.src;v.playsInline=true;v.preload='auto';
-      v.muted=mb.muted!==false;v.loop=mb.loop!==false;
+      // Met stukjes regelt pWatchSegments het herhalen
+      v.muted=mb.muted!==false;v.loop=mb.loop!==false&&!segs.length;
+      if(segs.length)v.currentTime=segs[0].s;
       el.style.pointerEvents='auto';
       el.appendChild(v);
       const btn=document.createElement('div');btn.className='vid-play';el.appendChild(btn);
-      v.addEventListener('play',()=>{el.dataset.started='1';el.classList.add('playing');});
+      // Video via een link die (nu) niet laadt: melding tonen, en 'volgende'
+      // gaat gewoon door naar de volgende dia
+      v.addEventListener('error',()=>{
+        el.dataset.failed='1';
+        if(el.querySelector('.cloud-err'))return;
+        const m=document.createElement('div');m.className='cloud-err';
+        m.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;background:rgba(0,0,0,.75);color:#fff;font-family:Outfit,sans-serif;font-size:16px;pointer-events:none';
+        m.textContent=/^https?:/i.test(mb.src)?'De video kan niet worden geladen. Controleer de internetverbinding en de link.':'De video kan niet worden afgespeeld.';
+        el.appendChild(m);
+      });
+      v.addEventListener('play',()=>{el.dataset.started='1';el.classList.add('playing');pWatchSegments(el);});
       v.addEventListener('pause',()=>el.classList.remove('playing'));
-      v.addEventListener('click',e=>{e.stopPropagation();if(v.paused){el.dataset.started='1';pPlayVideo(v);}else v.pause();});
-      if(mb.autoplay!==false)requestAnimationFrame(()=>{if(v.isConnected)pPlayVideo(v);});
+      v.addEventListener('click',e=>{e.stopPropagation();if(v.paused)pStartMedia(el);else v.pause();});
+      if(mb.autoplay!==false)requestAnimationFrame(()=>{if(v.isConnected)pStartMedia(el);});
     } else if(mb.type==='youtube'){
       // Eerst een voorbeeldafbeelding; zodra de dia stilstaat wordt de speler
       // geladen (pPrepareSlideMedia). Starten: 'volgende', K of een klik.
       el.dataset.kind='youtube';el.dataset.yt=mb.src;
       el.dataset.start=String(Math.max(0,parseInt(mb.start)||0));
+      const segs=cleanSegments(mb.segments);
+      if(segs.length)el.dataset.segs=JSON.stringify(segs);
       el.style.pointerEvents='auto';
       el.innerHTML=`<div class="yt-thumb" onclick="event.stopPropagation();pStartMedia(this.parentElement)"><img src="https://img.youtube.com/vi/${mb.src}/hqdefault.jpg" alt="YouTube"><div class="yt-play-btn"></div></div>`;
     }
@@ -2132,6 +2243,93 @@ document.getElementById('video-file-input').addEventListener('change',e=>{
   const f=e.target.files[0];e.target.value='';if(f)addVideoFile(f,null);
 });
 
+// ── Video via een link (cloud) ──
+// De video blijft online staan (Dropbox, OneDrive/SharePoint, Google Drive of
+// een eigen website) en wordt van daaruit afgespeeld. Zo blijven het
+// presentatiebestand en de HTML-export klein. Alle opties (stukjes, auto
+// start, geluid, herhalen) werken net als bij een videobestand.
+function isRemoteVideoSrc(src){return /^https?:\/\//i.test(src||'');}
+// Deellinks van bekende diensten omzetten naar een link die rechtstreeks naar
+// het videobestand wijst. {url, service} of null.
+function cloudVideoUrl(raw){
+  raw=String(raw||'').trim();
+  let u;try{u=new URL(raw);}catch(e){return null;}
+  if(!/^https?:$/.test(u.protocol))return null;
+  const h=u.hostname.toLowerCase();
+  if(h==='dropbox.com'||h.endsWith('.dropbox.com')){
+    if(h.startsWith('dl.'))return{url:u.toString(),service:'Dropbox'};
+    u.searchParams.delete('dl');u.searchParams.set('raw','1');
+    return{url:u.toString(),service:'Dropbox'};
+  }
+  const gd=raw.match(/drive\.google\.com\/file\/d\/([\w-]{10,})/)||raw.match(/drive\.google\.com\/(?:open|uc)\?(?:.*&)?id=([\w-]{10,})/);
+  if(gd)return{url:`https://drive.google.com/uc?export=download&id=${gd[1]}`,service:'Google Drive'};
+  if(h==='1drv.ms'||h==='onedrive.live.com'){
+    const b64=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'').replace(/\//g,'_').replace(/\+/g,'-');
+    return{url:`https://api.onedrive.com/v1.0/shares/u!${b64}/root/content`,service:'OneDrive'};
+  }
+  if(h.endsWith('.sharepoint.com')){u.searchParams.set('download','1');return{url:u.toString(),service:'SharePoint/OneDrive'};}
+  return{url:u.toString(),service:u.hostname};
+}
+function cloudServiceName(src){
+  try{const h=new URL(src).hostname.toLowerCase();
+    if(h.includes('dropbox'))return'Dropbox';if(h.includes('drive.google'))return'Google Drive';
+    if(h.includes('onedrive'))return'OneDrive';if(h.includes('sharepoint'))return'SharePoint';return h;}catch(e){return'link';}
+}
+// Probeer de video te laden; geeft {w,h,dur} of null (na hoogstens 20 s)
+function probeVideoUrl(url){
+  return new Promise(resolve=>{
+    const v=document.createElement('video');
+    let done=false;
+    const finish=r=>{if(done)return;done=true;clearTimeout(tm);v.removeAttribute('src');try{v.load();}catch(e){}resolve(r);};
+    const tm=setTimeout(()=>finish(null),20000);
+    v.preload='metadata';v.muted=true;
+    v.addEventListener('loadedmetadata',()=>finish({w:v.videoWidth,h:v.videoHeight,dur:v.duration}));
+    v.addEventListener('error',()=>finish(null));
+    v.src=url;
+  });
+}
+const CLOUD_HELP='De link moet openbaar zijn ("iedereen met de link") en naar het videobestand zelf wijzen (MP4 of WebM). Deellinks van Dropbox, OneDrive, SharePoint en Google Drive worden vanzelf omgezet. Bij Google Drive werken grote bestanden (boven ±100 MB) vaak niet.';
+// Vraag een videolink en controleer hem. Geeft {url,service,meta} of null.
+async function askCloudVideoUrl(title,value){
+  const r=await appDialog({
+    kind:'cloud',title:title,
+    message:'Plak de link naar een video die online staat. De video wordt niet in de presentatie opgeslagen, dus het bestand en de HTML-export blijven klein. Tijdens het presenteren is internet nodig.\n\n'+CLOUD_HELP,
+    input:{value:value||'',placeholder:'https://…'},
+    validate:v=>cloudVideoUrl(v)?'':'Dit is geen geldige link (hij moet met https:// beginnen).',
+    buttons:[{label:'Annuleren',value:'cancel'},{label:'Controleren en toevoegen',value:'ok',primary:true}]
+  });
+  if(r.button!=='ok')return null;
+  const c=cloudVideoUrl(r.value);
+  const busy=showToast('Link controleren…','info',0);
+  const meta=await probeVideoUrl(c.url);
+  busy.close();
+  if(!meta){
+    const go=await appDialog({title:'Video niet gevonden',
+      message:`De video kon via deze link niet worden geladen.\n\n${CLOUD_HELP}\n\nControleer of de link openbaar is. Toch gebruiken (bijvoorbeeld als de video pas later online komt)?`,
+      buttons:[{label:'Annuleren',value:false},{label:'Toch gebruiken',value:true}],cancelValue:false});
+    if(!go)return null;
+  }
+  return{url:c.url,service:c.service,meta};
+}
+async function addCloudVideo(){
+  const r=await askCloudVideoUrl('Video via link (cloud)');
+  if(!r)return;
+  let w=640,h=360;
+  if(r.meta&&r.meta.w&&r.meta.h){h=Math.round(w*r.meta.h/r.meta.w);if(h>540){h=540;w=Math.round(h*r.meta.w/r.meta.h);}}
+  addMediaBlock({type:'video',src:r.url,width:w,height:h,autoplay:false,muted:false,loop:false},null);
+  showToast(`Video toegevoegd vanaf ${r.service||'de link'}`+(r.meta&&isFinite(r.meta.dur)?` (${formatSeconds(r.meta.dur)})`:'')+'.','ok');
+}
+async function changeCloudVideoUrl(){
+  if(selectedMB===null)return;
+  const mb=slides[currentSlide].mediaBlocks[selectedMB];
+  if(!mb||mb.type!=='video'||!isRemoteVideoSrc(mb.src))return;
+  const r=await askCloudVideoUrl('Link van de video wijzigen',mb.src);
+  if(!r||!slides[currentSlide].mediaBlocks.includes(mb))return;
+  mb.src=r.url;
+  renderMediaBlocks();updateMcInputs();recordHistory();
+  showToast('Link gewijzigd','ok');
+}
+
 async function addYouTubeBlock(){
   const r=await appDialog({
     kind:'youtube',title:'YouTube toevoegen',
@@ -2167,10 +2365,24 @@ function renderMediaBlocks(){
     if(mb.type==='image'){
       el.innerHTML=`<img src="${escHTML(mb.src)}" draggable="false" alt="">`;
     } else if(mb.type==='video'){
-      el.innerHTML=`<video src="${escHTML(mb.src)}" muted loop style="pointer-events:none"></video>`;
+      el.innerHTML=`<video src="${escHTML(mb.src)}" muted loop preload="metadata" style="pointer-events:none"></video>`;
+      if(isRemoteVideoSrc(mb.src)){
+        const b=document.createElement('span');b.className='seg-badge cloud-badge';
+        b.textContent='☁ '+cloudServiceName(mb.src);b.title='Speelt af vanaf: '+mb.src;
+        el.appendChild(b);
+        const vid=el.querySelector('video');
+        vid.addEventListener('error',()=>{if(!el.querySelector('.cloud-err')){const m=document.createElement('div');m.className='cloud-err';m.textContent='Video via link kan niet worden geladen';el.appendChild(m);}});
+      }
     } else if(mb.type==='youtube'){
       el.innerHTML=`<div class="yt-placeholder"><div class="yt-play"></div><span class="yt-id">${YT_ID_RE.test(mb.src||'')?'YouTube: '+escHTML(mb.src)+(mb.start?' · vanaf '+formatSeconds(mb.start):''):'Ongeldige YouTube-link'}</span></div>`;
-    } else if(mb.type==='svgtext'){
+    }
+    if((mb.type==='video'||mb.type==='youtube')&&cleanSegments(mb.segments).length){
+      const n=cleanSegments(mb.segments).length;
+      const b=document.createElement('span');b.className='seg-badge seg-count';
+      b.textContent=`✂ ${n} stuk${n===1?'je':'jes'}`;b.title=cleanSegments(mb.segments).map(sg=>formatTime(sg.s)+'–'+(sg.e==null?'einde':formatTime(sg.e))).join(', ');
+      el.appendChild(b);
+    }
+    if(mb.type==='svgtext'){
       const parser=new DOMParser();const doc=parser.parseFromString(mb.src,'image/svg+xml');const svgEl=doc.querySelector('svg');
       if(svgEl){
         svgEl.setAttribute('width','100%');svgEl.setAttribute('height','100%');svgEl.style.display='block';svgEl.style.overflow='visible';
@@ -2410,15 +2622,17 @@ function updateMcInputs(){
   document.getElementById('mc-opacity-range').value=opVal;
   document.getElementById('mc-opacity-val').textContent=opVal+'%';
   document.getElementById('mc-video-opts').classList.toggle('visible',mb.type==='video');
-  document.getElementById('mc-yt-opts').classList.toggle('visible',mb.type==='youtube');
+  const isVid=mb.type==='video'||mb.type==='youtube';
+  document.getElementById('mc-seg-opts').classList.toggle('visible',isVid);
+  document.getElementById('mc-cloud-btn').style.display=(mb.type==='video'&&isRemoteVideoSrc(mb.src))?'':'none';
+  if(isVid){
+    const n=cleanSegments(mb.segments).length;
+    document.getElementById('mc-seg-btn').textContent=n?`✂ ${n} stuk${n===1?'je':'jes'} gekozen…`:(mb.start?`✂ Vanaf ${formatSeconds(mb.start)}…`:'✂ Stukjes kiezen…');
+  }
   if(mb.type==='video'){
     document.getElementById('mc-autoplay').checked=mb.autoplay!==false;
     document.getElementById('mc-sound').checked=mb.muted===false;
     document.getElementById('mc-loop').checked=mb.loop!==false;
-  }
-  if(mb.type==='youtube'){
-    const inp=document.getElementById('mc-yt-start');
-    if(document.activeElement!==inp)inp.value=mb.start?formatSeconds(mb.start):'';
   }
 }
 // "1:30" ⇄ 90 seconden (ook "1:02:03" en "90")
@@ -2426,12 +2640,19 @@ function parseSeconds(v){
   v=String(v||'').trim();if(!v)return 0;
   const parts=v.split(':').map(p=>parseFloat(p.replace(',','.')));
   if(parts.some(p=>!isFinite(p)||p<0))return null;
-  return Math.round(parts.reduce((t,p)=>t*60+p,0));
+  return Math.round(parts.reduce((t,p)=>t*60+p,0)*10)/10;
 }
 function formatSeconds(s){
   s=Math.max(0,Math.round(s||0));
   const h=Math.floor(s/3600),m=Math.floor(s/60)%60,sec=s%60;
   return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');
+}
+// Zelfde, maar met tienden als die er zijn (1:05.5) — voor stukjes van een video
+function formatTime(s){
+  s=Math.max(0,Math.round((s||0)*10)/10);
+  if(Math.abs(s-Math.round(s))<0.05)return formatSeconds(s);
+  const whole=Math.floor(s),tenth=Math.round((s-whole)*10);
+  return formatSeconds(whole)+'.'+tenth;
 }
 // Starttijd uit een YouTube-link halen (?t=90, &t=1m30s, ?start=90)
 function parseYouTubeStart(url){
@@ -2452,14 +2673,161 @@ function parseYouTubeStart(url){
     else mb.loop=e.target.checked;
   });
 });
-document.getElementById('mc-yt-start').addEventListener('change',e=>{
+// ── Stukjes van een video kiezen (eigen video en YouTube) ──
+// Een venster met de video: afspelen, en op de juiste momenten op "Begin
+// stukje hier" en "Einde stukje hier" klikken. Tijden kun je ook typen.
+// Geen stukjes = de hele video. In de presentatie speelt de video alleen
+// deze stukjes, achter elkaar (zie pWatchSegments).
+function openSegmentsEditor(){
   if(selectedMB===null)return;
-  const mb=slides[currentSlide].mediaBlocks[selectedMB];if(!mb||mb.type!=='youtube')return;
-  const s=parseSeconds(e.target.value);
-  if(s===null){showToast('Starttijd niet herkend. Gebruik bijvoorbeeld 1:30 of 90.','warn');e.target.value=mb.start?formatSeconds(mb.start):'';return;}
-  mb.start=s;e.target.value=s?formatSeconds(s):'';
-  renderMediaBlocks();
-});
+  const mb=slides[currentSlide].mediaBlocks[selectedMB];
+  if(!mb||(mb.type!=='video'&&mb.type!=='youtube'))return;
+  closeAllMenus();
+  let segs=cleanSegments(mb.segments);
+  if(!segs.length&&mb.start)segs=[{s:mb.start,e:null}];
+  let pending=null; // begin van een stukje waarvan het einde nog niet gekozen is
+  const prevFocus=document.activeElement;
+  const bg=document.createElement('div');bg.className='modal-bg visible app-dialog';
+  const box=document.createElement('div');box.className='modal-box dialog-box seg-box';box.dataset.kind='seg';
+  box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','seg-title');
+  box.innerHTML=`<h2 id="seg-title">Welke stukjes laat je zien?</h2>
+    <p class="dialog-msg">Speel de video af en klik op de juiste momenten op <strong>Begin stukje hier</strong> en <strong>Einde stukje hier</strong>. Je kunt tijden ook typen (bijv. 1:30). Geen stukjes = de hele video. In de presentatie speelt de video alleen deze stukjes, achter elkaar.</p>
+    <div class="seg-preview"></div>
+    <div class="seg-now-row">
+      <span class="seg-now">Nu: <strong id="seg-now">0:00</strong></span>
+      <button type="button" class="t-btn" id="seg-mark-start">⟦ Begin stukje hier</button>
+      <button type="button" class="t-btn" id="seg-mark-end" disabled>Einde stukje hier ⟧</button>
+    </div>
+    <div class="seg-status" id="seg-status" role="status" aria-live="polite"></div>
+    <ol class="seg-list" id="seg-list" aria-label="Gekozen stukjes"></ol>
+    <div class="dialog-actions seg-actions">
+      <button type="button" class="t-btn" id="seg-add">+ Stukje met de hand</button>
+      <button type="button" class="t-btn" id="seg-clear">Hele video</button>
+      <span class="t-spacer"></span>
+      <button type="button" class="t-btn" id="seg-cancel">Annuleren</button>
+      <button type="button" class="t-btn primary" id="seg-save">Opslaan</button>
+    </div>`;
+  bg.appendChild(box);document.body.appendChild(bg);
+  const $=s=>box.querySelector(s);
+  const status=(msg,err)=>{const st=$('#seg-status');st.textContent=msg||'';st.classList.toggle('error',!!err);};
+
+  // Voorbeeldspeler: dezelfde bediening voor eigen video en YouTube
+  const prev=$('.seg-preview');
+  let api={t:()=>0,seek:()=>{},play:()=>{},dur:()=>NaN,destroy:()=>{}};
+  if(mb.type==='video'){
+    const v=document.createElement('video');
+    v.src=mb.src;v.controls=true;v.preload='metadata';v.playsInline=true;
+    v.setAttribute('aria-label','Voorbeeld van de video');
+    prev.appendChild(v);
+    if(segs.length)v.currentTime=segs[0].s;
+    api={t:()=>v.currentTime||0,seek:t=>{v.currentTime=t;},play:()=>{v.play().catch(()=>{});},dur:()=>v.duration,
+      destroy:()=>{try{v.pause();v.removeAttribute('src');v.load();}catch(e){}}};
+  }else if(location.protocol==='file:'||!YT_ID_RE.test(mb.src||'')){
+    prev.innerHTML='<div class="seg-noplayer">Het voorbeeld kan hier niet worden getoond. Typ de tijden hieronder.</div>';
+  }else{
+    const mount=document.createElement('div');prev.appendChild(mount);
+    let player=null;
+    const ok=()=>player&&player.getCurrentTime;
+    api={t:()=>ok()?player.getCurrentTime():0,seek:t=>{if(ok())player.seekTo(t,true);},play:()=>{if(ok())player.playVideo();},
+      dur:()=>ok()?player.getDuration():NaN,destroy:()=>{try{if(player&&player.destroy)player.destroy();}catch(e){}}};
+    ensureYTApi().then(()=>{
+      if(!mount.isConnected)return;
+      player=new YT.Player(mount,{videoId:mb.src,host:'https://www.youtube-nocookie.com',
+        playerVars:{rel:0,playsinline:1,iv_load_policy:3,start:segs.length?Math.floor(segs[0].s):0,origin:location.origin}});
+    });
+  }
+  const nowTimer=setInterval(()=>{
+    const d=api.dur();
+    $('#seg-now').textContent=formatTime(api.t())+(isFinite(d)&&d>0?' / '+formatSeconds(d):'');
+  },250);
+
+  function render(focusIdx,focusKey){
+    const list=$('#seg-list');list.innerHTML='';
+    if(!segs.length){
+      const li=document.createElement('li');li.className='seg-empty';
+      li.textContent='Nog geen stukjes gekozen: de hele video wordt getoond.';
+      list.appendChild(li);return;
+    }
+    segs.forEach((sg,i)=>{
+      const li=document.createElement('li');li.className='seg-row';
+      li.innerHTML=`<span class="seg-nr">${i+1}.</span>
+        <label>van <input type="text" class="seg-time" data-k="s" value="${formatTime(sg.s)}" aria-label="Stukje ${i+1}: begin" inputmode="numeric"></label>
+        <label>tot <input type="text" class="seg-time" data-k="e" value="${sg.e==null?'':formatTime(sg.e)}" placeholder="einde" aria-label="Stukje ${i+1}: einde (leeg = tot het einde)" inputmode="numeric"></label>
+        <span class="seg-len">${sg.e==null?'tot het einde':formatTime(sg.e-sg.s)}</span>
+        <button type="button" class="style-btn seg-play" title="Bekijk dit stukje" aria-label="Bekijk stukje ${i+1}">▶</button>
+        <button type="button" class="style-btn seg-del" title="Verwijder dit stukje" aria-label="Verwijder stukje ${i+1}">×</button>`;
+      li.querySelectorAll('.seg-time').forEach(inp=>{
+        inp.addEventListener('change',()=>{
+          const k=inp.dataset.k,raw=inp.value.trim();
+          if(k==='e'&&!raw){sg.e=null;}
+          else{
+            const val=parseSeconds(raw);
+            if(val===null){status('Tijd niet herkend. Gebruik bijvoorbeeld 1:30 of 90.',true);inp.value=sg[k]==null?'':formatTime(sg[k]);return;}
+            sg[k]=val;
+          }
+          if(sg.e!=null&&sg.e<=sg.s+0.2){status(`Bij stukje ${i+1} moet het einde na het begin liggen.`,true);return;}
+          segs=cleanSegments(segs);status('');render();
+        });
+      });
+      li.querySelector('.seg-play').addEventListener('click',()=>{api.seek(sg.s);api.play();});
+      li.querySelector('.seg-del').addEventListener('click',()=>{
+        segs.splice(i,1);status(`Stukje ${i+1} verwijderd.`);render();
+        const b=$('#seg-list .seg-del')||$('#seg-mark-start');if(b)b.focus();
+      });
+      list.appendChild(li);
+    });
+    if(focusIdx!=null){const inp=list.querySelectorAll('.seg-row')[focusIdx];const f=inp&&inp.querySelector(`.seg-time[data-k="${focusKey||'s'}"]`);if(f){f.focus();f.select();}}
+  }
+  render();
+
+  $('#seg-mark-start').addEventListener('click',()=>{
+    pending=Math.round(api.t()*10)/10;
+    $('#seg-mark-end').disabled=false;
+    status(`Begin gezet op ${formatTime(pending)}. Speel verder en klik op "Einde stukje hier".`);
+  });
+  $('#seg-mark-end').addEventListener('click',()=>{
+    if(pending==null)return;
+    const t=Math.round(api.t()*10)/10;
+    if(t<=pending+0.2){status('Het einde moet na het begin liggen. Speel de video verder af.',true);return;}
+    segs=cleanSegments([...segs,{s:pending,e:t}]);
+    status(`Stukje toegevoegd: ${formatTime(pending)} – ${formatTime(t)}.`);
+    pending=null;$('#seg-mark-end').disabled=true;
+    render();
+  });
+  $('#seg-add').addEventListener('click',()=>{
+    const s=Math.floor(api.t()),last=segs[segs.length-1];
+    const start=last&&last.e!=null&&s<last.e?Math.ceil(last.e)+1:s;
+    segs.push({s:start,e:start+10});
+    const idx=segs.length-1;
+    status('Stukje toegevoegd; pas de tijden aan.');
+    render(idx,'s');
+  });
+  $('#seg-clear').addEventListener('click',()=>{segs=[];pending=null;$('#seg-mark-end').disabled=true;status('Alle stukjes weggehaald: de hele video wordt getoond.');render();});
+
+  function close(){
+    clearInterval(nowTimer);api.destroy();
+    document.removeEventListener('keydown',onKey,true);
+    bg.remove();
+    try{if(prevFocus&&prevFocus.isConnected)prevFocus.focus();}catch(e){}
+  }
+  function save(){
+    if(pending!=null){segs=cleanSegments([...segs,{s:pending,e:null}]);}
+    segs=cleanSegments(segs);
+    if(segs.length)mb.segments=segs;else delete mb.segments;
+    mb.start=0; // zit nu in de stukjes
+    close();
+    renderMediaBlocks();updateMcInputs();recordHistory();
+    showToast(segs.length?`${segs.length} stuk${segs.length===1?'je':'jes'} ingesteld: ${segs.map(sg=>formatTime(sg.s)+'–'+(sg.e==null?'einde':formatTime(sg.e))).join(', ')}`:'De hele video wordt getoond','ok',5000);
+  }
+  $('#seg-cancel').addEventListener('click',close);
+  $('#seg-save').addEventListener('click',save);
+  function onKey(e){
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}
+    else if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('seg-time')){e.preventDefault();e.target.dispatchEvent(new Event('change'));}
+  }
+  document.addEventListener('keydown',onKey,true);
+  requestAnimationFrame(()=>{$('#seg-mark-start').focus();});
+}
 
 document.getElementById('mc-width-input').addEventListener('input',e=>{
   if(selectedMB===null)return;
@@ -4740,11 +5108,13 @@ function normalizeSlide(s){
       let src=strOr(mb.src,'');
       if(type==='svgtext')src=sanitizeSvgText(src);
       else if(type==='youtube'&&!YT_ID_RE.test(src))src=extractYouTubeID(src)||'';
+      else if(type==='video'&&!/^(data:video\/|https?:\/\/)/i.test(src))src='';
       else if(/^\s*javascript:/i.test(src))src='';
       const base={type,src,x:numOr(mb.x,200),y:numOr(mb.y,200),width:numOr(mb.width,400),height:numOr(mb.height,300),rotation:numOr(mb.rotation,0),opacity:numOr(mb.opacity,1),autoplay:mb.autoplay!==false,zOrder:numOr(mb.zOrder,0)};
       // Video: zonder deze velden (oudere bestanden) zonder geluid en herhalend
       if(type==='video'){base.muted=mb.muted!==false;base.loop=mb.loop!==false;}
       if(type==='youtube')base.start=Math.max(0,Math.round(numOr(mb.start,0)));
+      if(type==='video'||type==='youtube'){const sg=cleanSegments(mb.segments);if(sg.length)base.segments=sg;}
       if(type==='svgtext'){
         const pts=p=>Array.isArray(p)?p.filter(q=>q&&isFinite(q.x)&&isFinite(q.y)).map(q=>{const o={x:+q.x,y:+q.y};if(q.cpIn&&isFinite(q.cpIn.x)&&isFinite(q.cpIn.y))o.cpIn={x:+q.cpIn.x,y:+q.cpIn.y};if(q.cpOut&&isFinite(q.cpOut.x)&&isFinite(q.cpOut.y))o.cpOut={x:+q.cpOut.x,y:+q.cpOut.y};return o;}):null;
         base.text=strOr(mb.text,'');base.letterColors=Array.isArray(mb.letterColors)?mb.letterColors.map(c=>safeColor(c,'#1a1a1a')):[];
@@ -5001,9 +5371,11 @@ async function exportStandaloneHTML(){
   saveInputs();
   closeAllMenus();
   if(!slides.some(slideHasContent)){showToast('Deze presentatie is nog leeg: er valt niets te exporteren.','warn');return;}
-  const videoBytes=slides.reduce((n,s)=>n+(s.mediaBlocks||[]).filter(mb=>mb.type==='video').reduce((m,mb)=>m+(mb.src||'').length*0.75,0),0);
+  // Alleen video's die als bestand in de presentatie zitten tellen mee; een
+  // video via een link (cloud) blijft online en maakt de export niet groter
+  const videoBytes=slides.reduce((n,s)=>n+(s.mediaBlocks||[]).filter(mb=>mb.type==='video'&&!isRemoteVideoSrc(mb.src)).reduce((m,mb)=>m+(mb.src||'').length*0.75,0),0);
   const hasYouTube=slides.some(s=>(s.mediaBlocks||[]).some(mb=>mb.type==='youtube'));
-  if(videoBytes>40*1024*1024){showToast(`De video's gaan mee in het HTML-bestand; dat wordt ongeveer ${Math.round(videoBytes/1024/1024)} MB groot.`,'info',7000);}
+  if(videoBytes>20*1024*1024){showToast(`De videobestanden gaan mee in het HTML-bestand; dat wordt ongeveer ${Math.round(videoBytes/1024/1024)} MB groot. Tip: zet grote video's online en gebruik "Video via link (cloud)", dan blijft de export klein.`,'info',9000);}
   if(hasYouTube){showToast('Let op: in de geëxporteerde HTML opent een YouTube-video in een nieuw tabblad (insluiten werkt niet vanaf een bestand). Presenteer vanuit de app om de video ín de presentatie te spelen.','warn',9000);}
 
   // Show loading
@@ -5043,7 +5415,8 @@ async function exportStandaloneHTML(){
       mediaBlocks:(s.mediaBlocks||[]).filter(mb=>mb.type!=='svgtext').map(mb=>({
         type:mb.type,src:mb.src,x:mb.x,y:mb.y,width:mb.width,height:mb.height,
         rotation:mb.rotation||0,opacity:mb.opacity!==undefined?mb.opacity:1,zOrder:mb.zOrder||0,
-        autoplay:mb.autoplay!==false,muted:mb.muted!==false,loop:mb.loop!==false,start:mb.start||0
+        autoplay:mb.autoplay!==false,muted:mb.muted!==false,loop:mb.loop!==false,start:mb.start||0,
+        segments:cleanSegments(mb.segments)
       }))
     }));
 
